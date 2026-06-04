@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
@@ -42,6 +43,8 @@ func (r *CommentRepo) Create(ctx context.Context, c NewComment) (*ent.TicketComm
 		SetInternal(c.Internal).
 		SetAuthorID(c.AuthorID).
 		SetAuthorEmail(c.AuthorEmail).
+		SetCreateTime(time.Now()).
+		SetUpdateTime(time.Now()).
 		Save(ctx)
 	if err != nil {
 		r.log.Errorf("create comment failed: %s", err.Error())

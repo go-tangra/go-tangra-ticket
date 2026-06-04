@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
@@ -70,7 +71,9 @@ func (r *TicketRepo) Create(ctx context.Context, t NewTicket) (*ent.Ticket, erro
 		SetRequesterEmail(t.RequesterEmail).
 		SetRequesterName(t.RequesterName).
 		SetRecipient(t.Recipient).
-		SetAssigneeID(t.AssigneeID)
+		SetAssigneeID(t.AssigneeID).
+		SetCreateTime(time.Now()).
+		SetUpdateTime(time.Now())
 	if t.CreateBy != 0 {
 		b = b.SetCreateBy(t.CreateBy)
 	}
@@ -164,6 +167,7 @@ func (r *TicketRepo) Assign(ctx context.Context, tenantID uint32, id string, ass
 	e, err := r.entClient.Client().Ticket.UpdateOneID(id).
 		Where(ticket.TenantIDEQ(tenantID)).
 		SetAssigneeID(assigneeID).
+		SetUpdateTime(time.Now()).
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -178,6 +182,7 @@ func (r *TicketRepo) UpdateStatus(ctx context.Context, tenantID uint32, id, stat
 	e, err := r.entClient.Client().Ticket.UpdateOneID(id).
 		Where(ticket.TenantIDEQ(tenantID)).
 		SetStatus(status).
+		SetUpdateTime(time.Now()).
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -199,7 +204,7 @@ func (r *TicketRepo) Update(ctx context.Context, tenantID uint32, id string, sub
 	if priority != nil {
 		upd = upd.SetPriority(*priority)
 	}
-	e, err := upd.Save(ctx)
+	e, err := upd.SetUpdateTime(time.Now()).Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, nil
