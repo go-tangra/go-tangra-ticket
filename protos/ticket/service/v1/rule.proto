@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package ticket.service.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// RuleCondition is one row of the Cloudflare-style rule builder.
+message RuleCondition {
+  // field: subject | body | from | fromName | recipient
+  string field = 1 [json_name = "field"];
+  // operator: contains | not_contains | equals | not_equals | starts_with | ends_with | matches
+  string operator = 2 [json_name = "operator"];
+  string value = 3 [json_name = "value"];
+}
+
+// TicketRule auto-applies tags/categories to inbound tickets.
+message TicketRule {
+  string id = 1 [json_name = "id"];
+  uint32 tenant_id = 2 [json_name = "tenantId"];
+  string name = 3 [json_name = "name"];
+  bool enabled = 4 [json_name = "enabled"];
+  int32 sort_order = 5 [json_name = "sortOrder"];
+  // match: ALL (AND) or ANY (OR)
+  string match = 6 [json_name = "match"];
+  repeated RuleCondition conditions = 7 [json_name = "conditions"];
+  // expression overrides conditions when set (raw CEL).
+  string expression = 8 [json_name = "expression"];
+  string tag_kind = 9 [json_name = "tagKind"];
+  repeated string tag_names = 10 [json_name = "tagNames"];
+  google.protobuf.Timestamp create_time = 11 [json_name = "createTime"];
+  google.protobuf.Timestamp update_time = 12 [json_name = "updateTime"];
+}
+
+service TicketRuleService {
+  rpc ListRules(ListRulesRequest) returns (ListRulesResponse) {
+    option (google.api.http) = {get: "/v1/rules"};
+  }
+  rpc GetRule(GetRuleRequest) returns (GetRuleResponse) {
+    option (google.api.http) = {get: "/v1/rules/{id}"};
+  }
+  rpc CreateRule(CreateRuleRequest) returns (CreateRuleResponse) {
+    option (google.api.http) = {
+      post: "/v1/rules"
+      body: "*"
+    };
+  }
+  rpc UpdateRule(UpdateRuleRequest) returns (UpdateRuleResponse) {
+    option (google.api.http) = {
+      put: "/v1/rules/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteRule(DeleteRuleRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/rules/{id}"};
+  }
+}
+
+message ListRulesRequest {}
+message ListRulesResponse {
+  repeated TicketRule rules = 1 [json_name = "rules"];
+}
+
+message GetRuleRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+}
+message GetRuleResponse {
+  TicketRule rule = 1 [json_name = "rule"];
+}
+
+message RuleInput {
+  string name = 1 [json_name = "name"];
+  bool enabled = 2 [json_name = "enabled"];
+  int32 sort_order = 3 [json_name = "sortOrder"];
+  string match = 4 [json_name = "match"];
+  repeated RuleCondition conditions = 5 [json_name = "conditions"];
+  string expression = 6 [json_name = "expression"];
+  string tag_kind = 7 [json_name = "tagKind"];
+  repeated string tag_names = 8 [json_name = "tagNames"];
+}
+
+message CreateRuleRequest {
+  RuleInput rule = 1 [json_name = "rule"];
+}
+message CreateRuleResponse {
+  TicketRule rule = 1 [json_name = "rule"];
+}
+
+message UpdateRuleRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+  RuleInput rule = 2 [json_name = "rule"];
+}
+message UpdateRuleResponse {
+  TicketRule rule = 1 [json_name = "rule"];
+}
+
+message DeleteRuleRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+}

@@ -20,8 +20,11 @@ import type {
   Ticket,
   TicketComment,
   TicketStatus,
+  TicketTag,
 } from '../../api/client';
+import { useTagStore } from '../../stores/tag.state';
 import { useTicketStore } from '../../stores/ticket.state';
+import { tagColor } from '../rules/helpers';
 import EmailViewer from './EmailViewer.vue';
 import { humanizeEnum, priorityColor, statusColor, statusOptions } from './helpers';
 
@@ -37,10 +40,16 @@ const emit = defineEmits<{
 }>();
 
 const store = useTicketStore();
+const tagStore = useTagStore();
 
 const loading = ref(false);
 const ticket = ref<Ticket | null>(null);
 const comments = ref<TicketComment[]>([]);
+
+const allTags = ref<TicketTag[]>([]);
+const editingTags = ref(false);
+const selectedTagIds = ref<string[]>([]);
+const savingTags = ref(false);
 
 const assignee = ref<number | undefined>(undefined);
 const status = ref<TicketStatus | undefined>(undefined);
@@ -67,7 +76,9 @@ async function loadAll() {
     ticket.value = await store.getTicket(props.ticketId);
     assignee.value = ticket.value.assigneeId || undefined;
     status.value = ticket.value.status;
+    editingTags.value = false;
     comments.value = await store.listComments(props.ticketId);
+    allTags.value = await tagStore.listTags();
   } catch (e: any) {
     antMessage.error(e?.message ?? 'Load failed');
   } finally {
@@ -122,6 +133,35 @@ const assigneeOptions = () => [
   { value: 0, label: $t('ticket.page.ticket.unassigned') },
   ...props.users.map((u) => ({ value: u.id, label: u.name || u.username })),
 ];
+
+const tagOptions = () =>
+  allTags.value.map((t) => ({
+    value: t.id,
+    label: `${t.kind === 'CATEGORY' ? '▣ ' : ''}${t.name}`,
+  }));
+
+function startEditTags() {
+  selectedTagIds.value = (ticket.value?.tags ?? [])
+    .map((t) => t.id)
+    .filter((id): id is string => !!id);
+  editingTags.value = true;
+}
+
+async function saveTags() {
+  if (!ticket.value) return;
+  savingTags.value = true;
+  try {
+    await tagStore.setTicketTags(props.ticketId, selectedTagIds.value);
+    ticket.value = await store.getTicket(props.ticketId);
+    editingTags.value = false;
+    antMessage.success($t('ticket.page.ticket.tagsSuccess'));
+    emit('changed');
+  } catch (e: any) {
+    antMessage.error(e?.message ?? 'Failed to update tags');
+  } finally {
+    savingTags.value = false;
+  }
+}
 </script>
 
 <template>
@@ -140,6 +180,41 @@ const assigneeOptions = () => [
           <Tag :color="statusColor(ticket.status)">{{ humanizeEnum(ticket.status) }}</Tag>
           <Tag :color="priorityColor(ticket.priority)">{{ humanizeEnum(ticket.priority) }}</Tag>
           <Tag v-if="ticket.source">{{ ticket.source }}</Tag>
+        </div>
+
+        <div style="margin-bottom: 12px">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px">
+            <span style="font-weight: 500">{{ $t('ticket.page.ticket.tags') }}:</span>
+            <template v-if="!editingTags">
+              <Tag
+                v-for="t in ticket.tags || []"
+                :key="t.id"
+                :color="tagColor(t.color, t.name)"
+              >
+                {{ t.name }}
+              </Tag>
+              <span v-if="!ticket.tags || !ticket.tags.length" style="color: #888">—</span>
+              <Button type="link" size="small" @click="startEditTags">
+                {{ $t('ticket.action.edit') }}
+              </Button>
+            </template>
+          </div>
+          <div v-if="editingTags" style="display: flex; gap: 8px; align-items: center">
+            <Select
+              v-model:value="selectedTagIds"
+              :options="tagOptions()"
+              mode="multiple"
+              style="flex: 1"
+              option-filter-prop="label"
+              :placeholder="$t('ticket.page.ticket.tagsPlaceholder')"
+            />
+            <Button type="primary" size="small" :loading="savingTags" @click="saveTags">
+              {{ $t('ticket.action.save') }}
+            </Button>
+            <Button size="small" @click="editingTags = false">
+              {{ $t('ticket.action.cancel') }}
+            </Button>
+          </div>
         </div>
 
         <p>

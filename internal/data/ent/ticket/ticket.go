@@ -47,6 +47,8 @@ const (
 	FieldAssigneeID = "assignee_id"
 	// EdgeComments holds the string denoting the comments edge name in mutations.
 	EdgeComments = "comments"
+	// EdgeTags holds the string denoting the tags edge name in mutations.
+	EdgeTags = "tags"
 	// Table holds the table name of the ticket in the database.
 	Table = "ticket_tickets"
 	// CommentsTable is the table that holds the comments relation/edge.
@@ -56,6 +58,11 @@ const (
 	CommentsInverseTable = "ticket_comments"
 	// CommentsColumn is the table column denoting the comments relation/edge.
 	CommentsColumn = "ticket_id"
+	// TagsTable is the table that holds the tags relation/edge. The primary key declared below.
+	TagsTable = "ticket_tag_links"
+	// TagsInverseTable is the table name for the TicketTag entity.
+	// It exists in this package in order to avoid circular dependency with the "tickettag" package.
+	TagsInverseTable = "ticket_tags"
 )
 
 // Columns holds all SQL columns for ticket fields.
@@ -78,6 +85,12 @@ var Columns = []string{
 	FieldRecipient,
 	FieldAssigneeID,
 }
+
+var (
+	// TagsPrimaryKey and TagsColumn2 are the table columns denoting the
+	// primary key for the tags relation (M2M).
+	TagsPrimaryKey = []string{"ticket_id", "ticket_tag_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -214,10 +227,31 @@ func ByComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCommentsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByTagsCount orders the results by tags count.
+func ByTagsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTagsStep(), opts...)
+	}
+}
+
+// ByTags orders the results by tags terms.
+func ByTags(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTagsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newCommentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CommentsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
+	)
+}
+func newTagsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TagsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, TagsTable, TagsPrimaryKey...),
 	)
 }

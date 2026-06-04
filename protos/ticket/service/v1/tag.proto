@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package ticket.service.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "ticket/service/v1/ticket.proto";
+
+// TicketTag is defined in ticket.proto (the Ticket message references it),
+// keeping this file's import one-directional.
+
+service TicketTagService {
+  rpc ListTags(ListTagsRequest) returns (ListTagsResponse) {
+    option (google.api.http) = {get: "/v1/tags"};
+  }
+  rpc CreateTag(CreateTagRequest) returns (CreateTagResponse) {
+    option (google.api.http) = {
+      post: "/v1/tags"
+      body: "*"
+    };
+  }
+  rpc UpdateTag(UpdateTagRequest) returns (UpdateTagResponse) {
+    option (google.api.http) = {
+      put: "/v1/tags/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteTag(DeleteTagRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/tags/{id}"};
+  }
+  // SetTicketTags replaces a ticket's tags with the given tag ids (manual tagging).
+  rpc SetTicketTags(SetTicketTagsRequest) returns (SetTicketTagsResponse) {
+    option (google.api.http) = {
+      post: "/v1/tickets/{ticket_id}/tags"
+      body: "*"
+    };
+  }
+}
+
+message ListTagsRequest {
+  optional string kind = 1 [json_name = "kind"];
+}
+message ListTagsResponse {
+  repeated TicketTag tags = 1 [json_name = "tags"];
+}
+
+message CreateTagRequest {
+  string name = 1 [json_name = "name", (google.api.field_behavior) = REQUIRED, (buf.validate.field).string.min_len = 1];
+  string kind = 2 [json_name = "kind"];
+  string color = 3 [json_name = "color"];
+  string description = 4 [json_name = "description"];
+}
+message CreateTagResponse {
+  TicketTag tag = 1 [json_name = "tag"];
+}
+
+message UpdateTagRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+  optional string name = 2 [json_name = "name"];
+  optional string color = 3 [json_name = "color"];
+  optional string description = 4 [json_name = "description"];
+}
+message UpdateTagResponse {
+  TicketTag tag = 1 [json_name = "tag"];
+}
+
+message DeleteTagRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+}
+
+message SetTicketTagsRequest {
+  string ticket_id = 1 [json_name = "ticketId", (google.api.field_behavior) = REQUIRED];
+  repeated string tag_ids = 2 [json_name = "tagIds"];
+}
+message SetTicketTagsResponse {
+  Ticket ticket = 1 [json_name = "ticket"];
+}

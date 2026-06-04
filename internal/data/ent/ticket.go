@@ -60,9 +60,11 @@ type Ticket struct {
 type TicketEdges struct {
 	// Comments holds the value of the comments edge.
 	Comments []*TicketComment `json:"comments,omitempty"`
+	// Tags holds the value of the tags edge.
+	Tags []*TicketTag `json:"tags,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // CommentsOrErr returns the Comments value or an error if the edge
@@ -72,6 +74,15 @@ func (e TicketEdges) CommentsOrErr() ([]*TicketComment, error) {
 		return e.Comments, nil
 	}
 	return nil, &NotLoadedError{edge: "comments"}
+}
+
+// TagsOrErr returns the Tags value or an error if the edge
+// was not loaded in eager-loading.
+func (e TicketEdges) TagsOrErr() ([]*TicketTag, error) {
+	if e.loadedTypes[1] {
+		return e.Tags, nil
+	}
+	return nil, &NotLoadedError{edge: "tags"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -223,6 +234,11 @@ func (_m *Ticket) Value(name string) (ent.Value, error) {
 // QueryComments queries the "comments" edge of the Ticket entity.
 func (_m *Ticket) QueryComments() *TicketCommentQuery {
 	return NewTicketClient(_m.config).QueryComments(_m)
+}
+
+// QueryTags queries the "tags" edge of the Ticket entity.
+func (_m *Ticket) QueryTags() *TicketTagQuery {
+	return NewTicketClient(_m.config).QueryTags(_m)
 }
 
 // Update returns a builder for updating this Ticket.

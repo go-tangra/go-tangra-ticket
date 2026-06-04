@@ -96,6 +96,7 @@ func (r *TicketRepo) Create(ctx context.Context, t NewTicket) (*ent.Ticket, erro
 func (r *TicketRepo) Get(ctx context.Context, tenantID uint32, id string) (*ent.Ticket, error) {
 	e, err := r.entClient.Client().Ticket.Query().
 		Where(ticket.IDEQ(id), ticket.TenantIDEQ(tenantID)).
+		WithTags().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -156,6 +157,7 @@ func (r *TicketRepo) List(ctx context.Context, tenantID uint32, page, pageSize i
 		Order(ent.Desc(ticket.FieldCreateTime)).
 		Offset(int((page - 1) * pageSize)).
 		Limit(int(pageSize)).
+		WithTags().
 		All(ctx)
 	if err != nil {
 		return nil, 0, err

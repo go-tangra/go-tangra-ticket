@@ -19,5 +19,7 @@ var ProviderSet = wire.NewSet(
 	data.NewCommentRepo,
 	data.NewAttachmentRepo,
 	data.NewStorageClient,
+	data.NewTagRepo,
+	data.NewRuleRepo,
 	client.NewAdminClient,
 )

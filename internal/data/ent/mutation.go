@@ -15,6 +15,8 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketattachment"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketrule"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/tickettag"
 )
 
 const (
@@ -29,6 +31,8 @@ const (
 	TypeTicket           = "Ticket"
 	TypeTicketAttachment = "TicketAttachment"
 	TypeTicketComment    = "TicketComment"
+	TypeTicketRule       = "TicketRule"
+	TypeTicketTag        = "TicketTag"
 )
 
 // TicketMutation represents an operation that mutates the Ticket nodes in the graph.
@@ -60,6 +64,9 @@ type TicketMutation struct {
 	comments        map[string]struct{}
 	removedcomments map[string]struct{}
 	clearedcomments bool
+	tags            map[string]struct{}
+	removedtags     map[string]struct{}
+	clearedtags     bool
 	done            bool
 	oldValue        func(context.Context) (*Ticket, error)
 	predicates      []predicate.Ticket
@@ -1004,6 +1011,60 @@ func (m *TicketMutation) ResetComments() {
 	m.removedcomments = nil
 }
 
+// AddTagIDs adds the "tags" edge to the TicketTag entity by ids.
+func (m *TicketMutation) AddTagIDs(ids ...string) {
+	if m.tags == nil {
+		m.tags = make(map[string]struct{})
+	}
+	for i := range ids {
+		m.tags[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTags clears the "tags" edge to the TicketTag entity.
+func (m *TicketMutation) ClearTags() {
+	m.clearedtags = true
+}
+
+// TagsCleared reports if the "tags" edge to the TicketTag entity was cleared.
+func (m *TicketMutation) TagsCleared() bool {
+	return m.clearedtags
+}
+
+// RemoveTagIDs removes the "tags" edge to the TicketTag entity by IDs.
+func (m *TicketMutation) RemoveTagIDs(ids ...string) {
+	if m.removedtags == nil {
+		m.removedtags = make(map[string]struct{})
+	}
+	for i := range ids {
+		delete(m.tags, ids[i])
+		m.removedtags[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTags returns the removed IDs of the "tags" edge to the TicketTag entity.
+func (m *TicketMutation) RemovedTagsIDs() (ids []string) {
+	for id := range m.removedtags {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TagsIDs returns the "tags" edge IDs in the mutation.
+func (m *TicketMutation) TagsIDs() (ids []string) {
+	for id := range m.tags {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTags resets all changes to the "tags" edge.
+func (m *TicketMutation) ResetTags() {
+	m.tags = nil
+	m.clearedtags = false
+	m.removedtags = nil
+}
+
 // Where appends a list predicates to the TicketMutation builder.
 func (m *TicketMutation) Where(ps ...predicate.Ticket) {
 	m.predicates = append(m.predicates, ps...)
@@ -1500,9 +1561,12 @@ func (m *TicketMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TicketMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.comments != nil {
 		edges = append(edges, ticket.EdgeComments)
+	}
+	if m.tags != nil {
+		edges = append(edges, ticket.EdgeTags)
 	}
 	return edges
 }
@@ -1517,15 +1581,24 @@ func (m *TicketMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case ticket.EdgeTags:
+		ids := make([]ent.Value, 0, len(m.tags))
+		for id := range m.tags {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TicketMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removedcomments != nil {
 		edges = append(edges, ticket.EdgeComments)
+	}
+	if m.removedtags != nil {
+		edges = append(edges, ticket.EdgeTags)
 	}
 	return edges
 }
@@ -1540,15 +1613,24 @@ func (m *TicketMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case ticket.EdgeTags:
+		ids := make([]ent.Value, 0, len(m.removedtags))
+		for id := range m.removedtags {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TicketMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedcomments {
 		edges = append(edges, ticket.EdgeComments)
+	}
+	if m.clearedtags {
+		edges = append(edges, ticket.EdgeTags)
 	}
 	return edges
 }
@@ -1559,6 +1641,8 @@ func (m *TicketMutation) EdgeCleared(name string) bool {
 	switch name {
 	case ticket.EdgeComments:
 		return m.clearedcomments
+	case ticket.EdgeTags:
+		return m.clearedtags
 	}
 	return false
 }
@@ -1577,6 +1661,9 @@ func (m *TicketMutation) ResetEdge(name string) error {
 	switch name {
 	case ticket.EdgeComments:
 		m.ResetComments()
+		return nil
+	case ticket.EdgeTags:
+		m.ResetTags()
 		return nil
 	}
 	return fmt.Errorf("unknown Ticket edge %s", name)
@@ -3644,4 +3731,2093 @@ func (m *TicketCommentMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown TicketComment edge %s", name)
+}
+
+// TicketRuleMutation represents an operation that mutates the TicketRule nodes in the graph.
+type TicketRuleMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *string
+	create_time   *time.Time
+	update_time   *time.Time
+	delete_time   *time.Time
+	tenant_id     *uint32
+	addtenant_id  *int32
+	name          *string
+	enabled       *bool
+	sort_order    *int
+	addsort_order *int
+	match         *string
+	conditions    *string
+	expression    *string
+	tag_kind      *string
+	tag_names     *string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*TicketRule, error)
+	predicates    []predicate.TicketRule
+}
+
+var _ ent.Mutation = (*TicketRuleMutation)(nil)
+
+// ticketruleOption allows management of the mutation configuration using functional options.
+type ticketruleOption func(*TicketRuleMutation)
+
+// newTicketRuleMutation creates new mutation for the TicketRule entity.
+func newTicketRuleMutation(c config, op Op, opts ...ticketruleOption) *TicketRuleMutation {
+	m := &TicketRuleMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTicketRule,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTicketRuleID sets the ID field of the mutation.
+func withTicketRuleID(id string) ticketruleOption {
+	return func(m *TicketRuleMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TicketRule
+		)
+		m.oldValue = func(ctx context.Context) (*TicketRule, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().TicketRule.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTicketRule sets the old TicketRule of the mutation.
+func withTicketRule(node *TicketRule) ticketruleOption {
+	return func(m *TicketRuleMutation) {
+		m.oldValue = func(context.Context) (*TicketRule, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TicketRuleMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TicketRuleMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of TicketRule entities.
+func (m *TicketRuleMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TicketRuleMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TicketRuleMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TicketRule.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *TicketRuleMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *TicketRuleMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldCreateTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ClearCreateTime clears the value of the "create_time" field.
+func (m *TicketRuleMutation) ClearCreateTime() {
+	m.create_time = nil
+	m.clearedFields[ticketrule.FieldCreateTime] = struct{}{}
+}
+
+// CreateTimeCleared returns if the "create_time" field was cleared in this mutation.
+func (m *TicketRuleMutation) CreateTimeCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldCreateTime]
+	return ok
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *TicketRuleMutation) ResetCreateTime() {
+	m.create_time = nil
+	delete(m.clearedFields, ticketrule.FieldCreateTime)
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *TicketRuleMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *TicketRuleMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldUpdateTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ClearUpdateTime clears the value of the "update_time" field.
+func (m *TicketRuleMutation) ClearUpdateTime() {
+	m.update_time = nil
+	m.clearedFields[ticketrule.FieldUpdateTime] = struct{}{}
+}
+
+// UpdateTimeCleared returns if the "update_time" field was cleared in this mutation.
+func (m *TicketRuleMutation) UpdateTimeCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldUpdateTime]
+	return ok
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *TicketRuleMutation) ResetUpdateTime() {
+	m.update_time = nil
+	delete(m.clearedFields, ticketrule.FieldUpdateTime)
+}
+
+// SetDeleteTime sets the "delete_time" field.
+func (m *TicketRuleMutation) SetDeleteTime(t time.Time) {
+	m.delete_time = &t
+}
+
+// DeleteTime returns the value of the "delete_time" field in the mutation.
+func (m *TicketRuleMutation) DeleteTime() (r time.Time, exists bool) {
+	v := m.delete_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeleteTime returns the old "delete_time" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldDeleteTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeleteTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeleteTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeleteTime: %w", err)
+	}
+	return oldValue.DeleteTime, nil
+}
+
+// ClearDeleteTime clears the value of the "delete_time" field.
+func (m *TicketRuleMutation) ClearDeleteTime() {
+	m.delete_time = nil
+	m.clearedFields[ticketrule.FieldDeleteTime] = struct{}{}
+}
+
+// DeleteTimeCleared returns if the "delete_time" field was cleared in this mutation.
+func (m *TicketRuleMutation) DeleteTimeCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldDeleteTime]
+	return ok
+}
+
+// ResetDeleteTime resets all changes to the "delete_time" field.
+func (m *TicketRuleMutation) ResetDeleteTime() {
+	m.delete_time = nil
+	delete(m.clearedFields, ticketrule.FieldDeleteTime)
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *TicketRuleMutation) SetTenantID(u uint32) {
+	m.tenant_id = &u
+	m.addtenant_id = nil
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *TicketRuleMutation) TenantID() (r uint32, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldTenantID(ctx context.Context) (v *uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// AddTenantID adds u to the "tenant_id" field.
+func (m *TicketRuleMutation) AddTenantID(u int32) {
+	if m.addtenant_id != nil {
+		*m.addtenant_id += u
+	} else {
+		m.addtenant_id = &u
+	}
+}
+
+// AddedTenantID returns the value that was added to the "tenant_id" field in this mutation.
+func (m *TicketRuleMutation) AddedTenantID() (r int32, exists bool) {
+	v := m.addtenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTenantID clears the value of the "tenant_id" field.
+func (m *TicketRuleMutation) ClearTenantID() {
+	m.tenant_id = nil
+	m.addtenant_id = nil
+	m.clearedFields[ticketrule.FieldTenantID] = struct{}{}
+}
+
+// TenantIDCleared returns if the "tenant_id" field was cleared in this mutation.
+func (m *TicketRuleMutation) TenantIDCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldTenantID]
+	return ok
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *TicketRuleMutation) ResetTenantID() {
+	m.tenant_id = nil
+	m.addtenant_id = nil
+	delete(m.clearedFields, ticketrule.FieldTenantID)
+}
+
+// SetName sets the "name" field.
+func (m *TicketRuleMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *TicketRuleMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *TicketRuleMutation) ResetName() {
+	m.name = nil
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *TicketRuleMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *TicketRuleMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *TicketRuleMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// SetSortOrder sets the "sort_order" field.
+func (m *TicketRuleMutation) SetSortOrder(i int) {
+	m.sort_order = &i
+	m.addsort_order = nil
+}
+
+// SortOrder returns the value of the "sort_order" field in the mutation.
+func (m *TicketRuleMutation) SortOrder() (r int, exists bool) {
+	v := m.sort_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSortOrder returns the old "sort_order" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldSortOrder(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSortOrder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSortOrder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSortOrder: %w", err)
+	}
+	return oldValue.SortOrder, nil
+}
+
+// AddSortOrder adds i to the "sort_order" field.
+func (m *TicketRuleMutation) AddSortOrder(i int) {
+	if m.addsort_order != nil {
+		*m.addsort_order += i
+	} else {
+		m.addsort_order = &i
+	}
+}
+
+// AddedSortOrder returns the value that was added to the "sort_order" field in this mutation.
+func (m *TicketRuleMutation) AddedSortOrder() (r int, exists bool) {
+	v := m.addsort_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSortOrder resets all changes to the "sort_order" field.
+func (m *TicketRuleMutation) ResetSortOrder() {
+	m.sort_order = nil
+	m.addsort_order = nil
+}
+
+// SetMatch sets the "match" field.
+func (m *TicketRuleMutation) SetMatch(s string) {
+	m.match = &s
+}
+
+// Match returns the value of the "match" field in the mutation.
+func (m *TicketRuleMutation) Match() (r string, exists bool) {
+	v := m.match
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMatch returns the old "match" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldMatch(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMatch is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMatch requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMatch: %w", err)
+	}
+	return oldValue.Match, nil
+}
+
+// ResetMatch resets all changes to the "match" field.
+func (m *TicketRuleMutation) ResetMatch() {
+	m.match = nil
+}
+
+// SetConditions sets the "conditions" field.
+func (m *TicketRuleMutation) SetConditions(s string) {
+	m.conditions = &s
+}
+
+// Conditions returns the value of the "conditions" field in the mutation.
+func (m *TicketRuleMutation) Conditions() (r string, exists bool) {
+	v := m.conditions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConditions returns the old "conditions" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldConditions(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConditions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConditions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConditions: %w", err)
+	}
+	return oldValue.Conditions, nil
+}
+
+// ClearConditions clears the value of the "conditions" field.
+func (m *TicketRuleMutation) ClearConditions() {
+	m.conditions = nil
+	m.clearedFields[ticketrule.FieldConditions] = struct{}{}
+}
+
+// ConditionsCleared returns if the "conditions" field was cleared in this mutation.
+func (m *TicketRuleMutation) ConditionsCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldConditions]
+	return ok
+}
+
+// ResetConditions resets all changes to the "conditions" field.
+func (m *TicketRuleMutation) ResetConditions() {
+	m.conditions = nil
+	delete(m.clearedFields, ticketrule.FieldConditions)
+}
+
+// SetExpression sets the "expression" field.
+func (m *TicketRuleMutation) SetExpression(s string) {
+	m.expression = &s
+}
+
+// Expression returns the value of the "expression" field in the mutation.
+func (m *TicketRuleMutation) Expression() (r string, exists bool) {
+	v := m.expression
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpression returns the old "expression" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldExpression(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpression is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpression requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpression: %w", err)
+	}
+	return oldValue.Expression, nil
+}
+
+// ClearExpression clears the value of the "expression" field.
+func (m *TicketRuleMutation) ClearExpression() {
+	m.expression = nil
+	m.clearedFields[ticketrule.FieldExpression] = struct{}{}
+}
+
+// ExpressionCleared returns if the "expression" field was cleared in this mutation.
+func (m *TicketRuleMutation) ExpressionCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldExpression]
+	return ok
+}
+
+// ResetExpression resets all changes to the "expression" field.
+func (m *TicketRuleMutation) ResetExpression() {
+	m.expression = nil
+	delete(m.clearedFields, ticketrule.FieldExpression)
+}
+
+// SetTagKind sets the "tag_kind" field.
+func (m *TicketRuleMutation) SetTagKind(s string) {
+	m.tag_kind = &s
+}
+
+// TagKind returns the value of the "tag_kind" field in the mutation.
+func (m *TicketRuleMutation) TagKind() (r string, exists bool) {
+	v := m.tag_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagKind returns the old "tag_kind" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldTagKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagKind: %w", err)
+	}
+	return oldValue.TagKind, nil
+}
+
+// ResetTagKind resets all changes to the "tag_kind" field.
+func (m *TicketRuleMutation) ResetTagKind() {
+	m.tag_kind = nil
+}
+
+// SetTagNames sets the "tag_names" field.
+func (m *TicketRuleMutation) SetTagNames(s string) {
+	m.tag_names = &s
+}
+
+// TagNames returns the value of the "tag_names" field in the mutation.
+func (m *TicketRuleMutation) TagNames() (r string, exists bool) {
+	v := m.tag_names
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagNames returns the old "tag_names" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldTagNames(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagNames is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagNames requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagNames: %w", err)
+	}
+	return oldValue.TagNames, nil
+}
+
+// ClearTagNames clears the value of the "tag_names" field.
+func (m *TicketRuleMutation) ClearTagNames() {
+	m.tag_names = nil
+	m.clearedFields[ticketrule.FieldTagNames] = struct{}{}
+}
+
+// TagNamesCleared returns if the "tag_names" field was cleared in this mutation.
+func (m *TicketRuleMutation) TagNamesCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldTagNames]
+	return ok
+}
+
+// ResetTagNames resets all changes to the "tag_names" field.
+func (m *TicketRuleMutation) ResetTagNames() {
+	m.tag_names = nil
+	delete(m.clearedFields, ticketrule.FieldTagNames)
+}
+
+// Where appends a list predicates to the TicketRuleMutation builder.
+func (m *TicketRuleMutation) Where(ps ...predicate.TicketRule) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TicketRuleMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TicketRuleMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TicketRule, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TicketRuleMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TicketRuleMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TicketRule).
+func (m *TicketRuleMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TicketRuleMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.create_time != nil {
+		fields = append(fields, ticketrule.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, ticketrule.FieldUpdateTime)
+	}
+	if m.delete_time != nil {
+		fields = append(fields, ticketrule.FieldDeleteTime)
+	}
+	if m.tenant_id != nil {
+		fields = append(fields, ticketrule.FieldTenantID)
+	}
+	if m.name != nil {
+		fields = append(fields, ticketrule.FieldName)
+	}
+	if m.enabled != nil {
+		fields = append(fields, ticketrule.FieldEnabled)
+	}
+	if m.sort_order != nil {
+		fields = append(fields, ticketrule.FieldSortOrder)
+	}
+	if m.match != nil {
+		fields = append(fields, ticketrule.FieldMatch)
+	}
+	if m.conditions != nil {
+		fields = append(fields, ticketrule.FieldConditions)
+	}
+	if m.expression != nil {
+		fields = append(fields, ticketrule.FieldExpression)
+	}
+	if m.tag_kind != nil {
+		fields = append(fields, ticketrule.FieldTagKind)
+	}
+	if m.tag_names != nil {
+		fields = append(fields, ticketrule.FieldTagNames)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TicketRuleMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case ticketrule.FieldCreateTime:
+		return m.CreateTime()
+	case ticketrule.FieldUpdateTime:
+		return m.UpdateTime()
+	case ticketrule.FieldDeleteTime:
+		return m.DeleteTime()
+	case ticketrule.FieldTenantID:
+		return m.TenantID()
+	case ticketrule.FieldName:
+		return m.Name()
+	case ticketrule.FieldEnabled:
+		return m.Enabled()
+	case ticketrule.FieldSortOrder:
+		return m.SortOrder()
+	case ticketrule.FieldMatch:
+		return m.Match()
+	case ticketrule.FieldConditions:
+		return m.Conditions()
+	case ticketrule.FieldExpression:
+		return m.Expression()
+	case ticketrule.FieldTagKind:
+		return m.TagKind()
+	case ticketrule.FieldTagNames:
+		return m.TagNames()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TicketRuleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case ticketrule.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case ticketrule.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case ticketrule.FieldDeleteTime:
+		return m.OldDeleteTime(ctx)
+	case ticketrule.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case ticketrule.FieldName:
+		return m.OldName(ctx)
+	case ticketrule.FieldEnabled:
+		return m.OldEnabled(ctx)
+	case ticketrule.FieldSortOrder:
+		return m.OldSortOrder(ctx)
+	case ticketrule.FieldMatch:
+		return m.OldMatch(ctx)
+	case ticketrule.FieldConditions:
+		return m.OldConditions(ctx)
+	case ticketrule.FieldExpression:
+		return m.OldExpression(ctx)
+	case ticketrule.FieldTagKind:
+		return m.OldTagKind(ctx)
+	case ticketrule.FieldTagNames:
+		return m.OldTagNames(ctx)
+	}
+	return nil, fmt.Errorf("unknown TicketRule field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TicketRuleMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case ticketrule.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case ticketrule.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case ticketrule.FieldDeleteTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeleteTime(v)
+		return nil
+	case ticketrule.FieldTenantID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case ticketrule.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case ticketrule.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	case ticketrule.FieldSortOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSortOrder(v)
+		return nil
+	case ticketrule.FieldMatch:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMatch(v)
+		return nil
+	case ticketrule.FieldConditions:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConditions(v)
+		return nil
+	case ticketrule.FieldExpression:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpression(v)
+		return nil
+	case ticketrule.FieldTagKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagKind(v)
+		return nil
+	case ticketrule.FieldTagNames:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagNames(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TicketRule field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TicketRuleMutation) AddedFields() []string {
+	var fields []string
+	if m.addtenant_id != nil {
+		fields = append(fields, ticketrule.FieldTenantID)
+	}
+	if m.addsort_order != nil {
+		fields = append(fields, ticketrule.FieldSortOrder)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TicketRuleMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case ticketrule.FieldTenantID:
+		return m.AddedTenantID()
+	case ticketrule.FieldSortOrder:
+		return m.AddedSortOrder()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TicketRuleMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case ticketrule.FieldTenantID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTenantID(v)
+		return nil
+	case ticketrule.FieldSortOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSortOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TicketRule numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TicketRuleMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(ticketrule.FieldCreateTime) {
+		fields = append(fields, ticketrule.FieldCreateTime)
+	}
+	if m.FieldCleared(ticketrule.FieldUpdateTime) {
+		fields = append(fields, ticketrule.FieldUpdateTime)
+	}
+	if m.FieldCleared(ticketrule.FieldDeleteTime) {
+		fields = append(fields, ticketrule.FieldDeleteTime)
+	}
+	if m.FieldCleared(ticketrule.FieldTenantID) {
+		fields = append(fields, ticketrule.FieldTenantID)
+	}
+	if m.FieldCleared(ticketrule.FieldConditions) {
+		fields = append(fields, ticketrule.FieldConditions)
+	}
+	if m.FieldCleared(ticketrule.FieldExpression) {
+		fields = append(fields, ticketrule.FieldExpression)
+	}
+	if m.FieldCleared(ticketrule.FieldTagNames) {
+		fields = append(fields, ticketrule.FieldTagNames)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TicketRuleMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TicketRuleMutation) ClearField(name string) error {
+	switch name {
+	case ticketrule.FieldCreateTime:
+		m.ClearCreateTime()
+		return nil
+	case ticketrule.FieldUpdateTime:
+		m.ClearUpdateTime()
+		return nil
+	case ticketrule.FieldDeleteTime:
+		m.ClearDeleteTime()
+		return nil
+	case ticketrule.FieldTenantID:
+		m.ClearTenantID()
+		return nil
+	case ticketrule.FieldConditions:
+		m.ClearConditions()
+		return nil
+	case ticketrule.FieldExpression:
+		m.ClearExpression()
+		return nil
+	case ticketrule.FieldTagNames:
+		m.ClearTagNames()
+		return nil
+	}
+	return fmt.Errorf("unknown TicketRule nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TicketRuleMutation) ResetField(name string) error {
+	switch name {
+	case ticketrule.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case ticketrule.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case ticketrule.FieldDeleteTime:
+		m.ResetDeleteTime()
+		return nil
+	case ticketrule.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case ticketrule.FieldName:
+		m.ResetName()
+		return nil
+	case ticketrule.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	case ticketrule.FieldSortOrder:
+		m.ResetSortOrder()
+		return nil
+	case ticketrule.FieldMatch:
+		m.ResetMatch()
+		return nil
+	case ticketrule.FieldConditions:
+		m.ResetConditions()
+		return nil
+	case ticketrule.FieldExpression:
+		m.ResetExpression()
+		return nil
+	case ticketrule.FieldTagKind:
+		m.ResetTagKind()
+		return nil
+	case ticketrule.FieldTagNames:
+		m.ResetTagNames()
+		return nil
+	}
+	return fmt.Errorf("unknown TicketRule field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TicketRuleMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TicketRuleMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TicketRuleMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TicketRuleMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TicketRuleMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TicketRuleMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TicketRuleMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown TicketRule unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TicketRuleMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown TicketRule edge %s", name)
+}
+
+// TicketTagMutation represents an operation that mutates the TicketTag nodes in the graph.
+type TicketTagMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *string
+	create_time    *time.Time
+	update_time    *time.Time
+	delete_time    *time.Time
+	tenant_id      *uint32
+	addtenant_id   *int32
+	name           *string
+	kind           *string
+	color          *string
+	description    *string
+	clearedFields  map[string]struct{}
+	tickets        map[string]struct{}
+	removedtickets map[string]struct{}
+	clearedtickets bool
+	done           bool
+	oldValue       func(context.Context) (*TicketTag, error)
+	predicates     []predicate.TicketTag
+}
+
+var _ ent.Mutation = (*TicketTagMutation)(nil)
+
+// tickettagOption allows management of the mutation configuration using functional options.
+type tickettagOption func(*TicketTagMutation)
+
+// newTicketTagMutation creates new mutation for the TicketTag entity.
+func newTicketTagMutation(c config, op Op, opts ...tickettagOption) *TicketTagMutation {
+	m := &TicketTagMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTicketTag,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTicketTagID sets the ID field of the mutation.
+func withTicketTagID(id string) tickettagOption {
+	return func(m *TicketTagMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TicketTag
+		)
+		m.oldValue = func(ctx context.Context) (*TicketTag, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().TicketTag.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTicketTag sets the old TicketTag of the mutation.
+func withTicketTag(node *TicketTag) tickettagOption {
+	return func(m *TicketTagMutation) {
+		m.oldValue = func(context.Context) (*TicketTag, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TicketTagMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TicketTagMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of TicketTag entities.
+func (m *TicketTagMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TicketTagMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TicketTagMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TicketTag.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *TicketTagMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *TicketTagMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldCreateTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ClearCreateTime clears the value of the "create_time" field.
+func (m *TicketTagMutation) ClearCreateTime() {
+	m.create_time = nil
+	m.clearedFields[tickettag.FieldCreateTime] = struct{}{}
+}
+
+// CreateTimeCleared returns if the "create_time" field was cleared in this mutation.
+func (m *TicketTagMutation) CreateTimeCleared() bool {
+	_, ok := m.clearedFields[tickettag.FieldCreateTime]
+	return ok
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *TicketTagMutation) ResetCreateTime() {
+	m.create_time = nil
+	delete(m.clearedFields, tickettag.FieldCreateTime)
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *TicketTagMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *TicketTagMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldUpdateTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ClearUpdateTime clears the value of the "update_time" field.
+func (m *TicketTagMutation) ClearUpdateTime() {
+	m.update_time = nil
+	m.clearedFields[tickettag.FieldUpdateTime] = struct{}{}
+}
+
+// UpdateTimeCleared returns if the "update_time" field was cleared in this mutation.
+func (m *TicketTagMutation) UpdateTimeCleared() bool {
+	_, ok := m.clearedFields[tickettag.FieldUpdateTime]
+	return ok
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *TicketTagMutation) ResetUpdateTime() {
+	m.update_time = nil
+	delete(m.clearedFields, tickettag.FieldUpdateTime)
+}
+
+// SetDeleteTime sets the "delete_time" field.
+func (m *TicketTagMutation) SetDeleteTime(t time.Time) {
+	m.delete_time = &t
+}
+
+// DeleteTime returns the value of the "delete_time" field in the mutation.
+func (m *TicketTagMutation) DeleteTime() (r time.Time, exists bool) {
+	v := m.delete_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeleteTime returns the old "delete_time" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldDeleteTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeleteTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeleteTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeleteTime: %w", err)
+	}
+	return oldValue.DeleteTime, nil
+}
+
+// ClearDeleteTime clears the value of the "delete_time" field.
+func (m *TicketTagMutation) ClearDeleteTime() {
+	m.delete_time = nil
+	m.clearedFields[tickettag.FieldDeleteTime] = struct{}{}
+}
+
+// DeleteTimeCleared returns if the "delete_time" field was cleared in this mutation.
+func (m *TicketTagMutation) DeleteTimeCleared() bool {
+	_, ok := m.clearedFields[tickettag.FieldDeleteTime]
+	return ok
+}
+
+// ResetDeleteTime resets all changes to the "delete_time" field.
+func (m *TicketTagMutation) ResetDeleteTime() {
+	m.delete_time = nil
+	delete(m.clearedFields, tickettag.FieldDeleteTime)
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *TicketTagMutation) SetTenantID(u uint32) {
+	m.tenant_id = &u
+	m.addtenant_id = nil
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *TicketTagMutation) TenantID() (r uint32, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldTenantID(ctx context.Context) (v *uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// AddTenantID adds u to the "tenant_id" field.
+func (m *TicketTagMutation) AddTenantID(u int32) {
+	if m.addtenant_id != nil {
+		*m.addtenant_id += u
+	} else {
+		m.addtenant_id = &u
+	}
+}
+
+// AddedTenantID returns the value that was added to the "tenant_id" field in this mutation.
+func (m *TicketTagMutation) AddedTenantID() (r int32, exists bool) {
+	v := m.addtenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTenantID clears the value of the "tenant_id" field.
+func (m *TicketTagMutation) ClearTenantID() {
+	m.tenant_id = nil
+	m.addtenant_id = nil
+	m.clearedFields[tickettag.FieldTenantID] = struct{}{}
+}
+
+// TenantIDCleared returns if the "tenant_id" field was cleared in this mutation.
+func (m *TicketTagMutation) TenantIDCleared() bool {
+	_, ok := m.clearedFields[tickettag.FieldTenantID]
+	return ok
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *TicketTagMutation) ResetTenantID() {
+	m.tenant_id = nil
+	m.addtenant_id = nil
+	delete(m.clearedFields, tickettag.FieldTenantID)
+}
+
+// SetName sets the "name" field.
+func (m *TicketTagMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *TicketTagMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *TicketTagMutation) ResetName() {
+	m.name = nil
+}
+
+// SetKind sets the "kind" field.
+func (m *TicketTagMutation) SetKind(s string) {
+	m.kind = &s
+}
+
+// Kind returns the value of the "kind" field in the mutation.
+func (m *TicketTagMutation) Kind() (r string, exists bool) {
+	v := m.kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKind returns the old "kind" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKind: %w", err)
+	}
+	return oldValue.Kind, nil
+}
+
+// ResetKind resets all changes to the "kind" field.
+func (m *TicketTagMutation) ResetKind() {
+	m.kind = nil
+}
+
+// SetColor sets the "color" field.
+func (m *TicketTagMutation) SetColor(s string) {
+	m.color = &s
+}
+
+// Color returns the value of the "color" field in the mutation.
+func (m *TicketTagMutation) Color() (r string, exists bool) {
+	v := m.color
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldColor returns the old "color" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldColor(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldColor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldColor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldColor: %w", err)
+	}
+	return oldValue.Color, nil
+}
+
+// ClearColor clears the value of the "color" field.
+func (m *TicketTagMutation) ClearColor() {
+	m.color = nil
+	m.clearedFields[tickettag.FieldColor] = struct{}{}
+}
+
+// ColorCleared returns if the "color" field was cleared in this mutation.
+func (m *TicketTagMutation) ColorCleared() bool {
+	_, ok := m.clearedFields[tickettag.FieldColor]
+	return ok
+}
+
+// ResetColor resets all changes to the "color" field.
+func (m *TicketTagMutation) ResetColor() {
+	m.color = nil
+	delete(m.clearedFields, tickettag.FieldColor)
+}
+
+// SetDescription sets the "description" field.
+func (m *TicketTagMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *TicketTagMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the TicketTag entity.
+// If the TicketTag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketTagMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *TicketTagMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[tickettag.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *TicketTagMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[tickettag.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *TicketTagMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, tickettag.FieldDescription)
+}
+
+// AddTicketIDs adds the "tickets" edge to the Ticket entity by ids.
+func (m *TicketTagMutation) AddTicketIDs(ids ...string) {
+	if m.tickets == nil {
+		m.tickets = make(map[string]struct{})
+	}
+	for i := range ids {
+		m.tickets[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTickets clears the "tickets" edge to the Ticket entity.
+func (m *TicketTagMutation) ClearTickets() {
+	m.clearedtickets = true
+}
+
+// TicketsCleared reports if the "tickets" edge to the Ticket entity was cleared.
+func (m *TicketTagMutation) TicketsCleared() bool {
+	return m.clearedtickets
+}
+
+// RemoveTicketIDs removes the "tickets" edge to the Ticket entity by IDs.
+func (m *TicketTagMutation) RemoveTicketIDs(ids ...string) {
+	if m.removedtickets == nil {
+		m.removedtickets = make(map[string]struct{})
+	}
+	for i := range ids {
+		delete(m.tickets, ids[i])
+		m.removedtickets[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTickets returns the removed IDs of the "tickets" edge to the Ticket entity.
+func (m *TicketTagMutation) RemovedTicketsIDs() (ids []string) {
+	for id := range m.removedtickets {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TicketsIDs returns the "tickets" edge IDs in the mutation.
+func (m *TicketTagMutation) TicketsIDs() (ids []string) {
+	for id := range m.tickets {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTickets resets all changes to the "tickets" edge.
+func (m *TicketTagMutation) ResetTickets() {
+	m.tickets = nil
+	m.clearedtickets = false
+	m.removedtickets = nil
+}
+
+// Where appends a list predicates to the TicketTagMutation builder.
+func (m *TicketTagMutation) Where(ps ...predicate.TicketTag) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TicketTagMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TicketTagMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TicketTag, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TicketTagMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TicketTagMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TicketTag).
+func (m *TicketTagMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TicketTagMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.create_time != nil {
+		fields = append(fields, tickettag.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, tickettag.FieldUpdateTime)
+	}
+	if m.delete_time != nil {
+		fields = append(fields, tickettag.FieldDeleteTime)
+	}
+	if m.tenant_id != nil {
+		fields = append(fields, tickettag.FieldTenantID)
+	}
+	if m.name != nil {
+		fields = append(fields, tickettag.FieldName)
+	}
+	if m.kind != nil {
+		fields = append(fields, tickettag.FieldKind)
+	}
+	if m.color != nil {
+		fields = append(fields, tickettag.FieldColor)
+	}
+	if m.description != nil {
+		fields = append(fields, tickettag.FieldDescription)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TicketTagMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case tickettag.FieldCreateTime:
+		return m.CreateTime()
+	case tickettag.FieldUpdateTime:
+		return m.UpdateTime()
+	case tickettag.FieldDeleteTime:
+		return m.DeleteTime()
+	case tickettag.FieldTenantID:
+		return m.TenantID()
+	case tickettag.FieldName:
+		return m.Name()
+	case tickettag.FieldKind:
+		return m.Kind()
+	case tickettag.FieldColor:
+		return m.Color()
+	case tickettag.FieldDescription:
+		return m.Description()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TicketTagMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case tickettag.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case tickettag.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case tickettag.FieldDeleteTime:
+		return m.OldDeleteTime(ctx)
+	case tickettag.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case tickettag.FieldName:
+		return m.OldName(ctx)
+	case tickettag.FieldKind:
+		return m.OldKind(ctx)
+	case tickettag.FieldColor:
+		return m.OldColor(ctx)
+	case tickettag.FieldDescription:
+		return m.OldDescription(ctx)
+	}
+	return nil, fmt.Errorf("unknown TicketTag field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TicketTagMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case tickettag.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case tickettag.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case tickettag.FieldDeleteTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeleteTime(v)
+		return nil
+	case tickettag.FieldTenantID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case tickettag.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case tickettag.FieldKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKind(v)
+		return nil
+	case tickettag.FieldColor:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetColor(v)
+		return nil
+	case tickettag.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TicketTag field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TicketTagMutation) AddedFields() []string {
+	var fields []string
+	if m.addtenant_id != nil {
+		fields = append(fields, tickettag.FieldTenantID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TicketTagMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case tickettag.FieldTenantID:
+		return m.AddedTenantID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TicketTagMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case tickettag.FieldTenantID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTenantID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TicketTag numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TicketTagMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(tickettag.FieldCreateTime) {
+		fields = append(fields, tickettag.FieldCreateTime)
+	}
+	if m.FieldCleared(tickettag.FieldUpdateTime) {
+		fields = append(fields, tickettag.FieldUpdateTime)
+	}
+	if m.FieldCleared(tickettag.FieldDeleteTime) {
+		fields = append(fields, tickettag.FieldDeleteTime)
+	}
+	if m.FieldCleared(tickettag.FieldTenantID) {
+		fields = append(fields, tickettag.FieldTenantID)
+	}
+	if m.FieldCleared(tickettag.FieldColor) {
+		fields = append(fields, tickettag.FieldColor)
+	}
+	if m.FieldCleared(tickettag.FieldDescription) {
+		fields = append(fields, tickettag.FieldDescription)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TicketTagMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TicketTagMutation) ClearField(name string) error {
+	switch name {
+	case tickettag.FieldCreateTime:
+		m.ClearCreateTime()
+		return nil
+	case tickettag.FieldUpdateTime:
+		m.ClearUpdateTime()
+		return nil
+	case tickettag.FieldDeleteTime:
+		m.ClearDeleteTime()
+		return nil
+	case tickettag.FieldTenantID:
+		m.ClearTenantID()
+		return nil
+	case tickettag.FieldColor:
+		m.ClearColor()
+		return nil
+	case tickettag.FieldDescription:
+		m.ClearDescription()
+		return nil
+	}
+	return fmt.Errorf("unknown TicketTag nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TicketTagMutation) ResetField(name string) error {
+	switch name {
+	case tickettag.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case tickettag.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case tickettag.FieldDeleteTime:
+		m.ResetDeleteTime()
+		return nil
+	case tickettag.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case tickettag.FieldName:
+		m.ResetName()
+		return nil
+	case tickettag.FieldKind:
+		m.ResetKind()
+		return nil
+	case tickettag.FieldColor:
+		m.ResetColor()
+		return nil
+	case tickettag.FieldDescription:
+		m.ResetDescription()
+		return nil
+	}
+	return fmt.Errorf("unknown TicketTag field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TicketTagMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.tickets != nil {
+		edges = append(edges, tickettag.EdgeTickets)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TicketTagMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case tickettag.EdgeTickets:
+		ids := make([]ent.Value, 0, len(m.tickets))
+		for id := range m.tickets {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TicketTagMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedtickets != nil {
+		edges = append(edges, tickettag.EdgeTickets)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TicketTagMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case tickettag.EdgeTickets:
+		ids := make([]ent.Value, 0, len(m.removedtickets))
+		for id := range m.removedtickets {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TicketTagMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedtickets {
+		edges = append(edges, tickettag.EdgeTickets)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TicketTagMutation) EdgeCleared(name string) bool {
+	switch name {
+	case tickettag.EdgeTickets:
+		return m.clearedtickets
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TicketTagMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown TicketTag unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TicketTagMutation) ResetEdge(name string) error {
+	switch name {
+	case tickettag.EdgeTickets:
+		m.ResetTickets()
+		return nil
+	}
+	return fmt.Errorf("unknown TicketTag edge %s", name)
 }

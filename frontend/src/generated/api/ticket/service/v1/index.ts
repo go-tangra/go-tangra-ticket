@@ -137,6 +137,194 @@ export function createTicketCommentServiceClient(
 // An empty JSON object
 type wellKnownEmpty = Record<never, never>;
 
+// RuleCondition is one row of the Cloudflare-style rule builder.
+export type RuleCondition = {
+  // field: subject | body | from | fromName | recipient
+  field: string | undefined;
+  // operator: contains | not_contains | equals | not_equals | starts_with | ends_with | matches
+  operator: string | undefined;
+  value: string | undefined;
+};
+
+// TicketRule auto-applies tags/categories to inbound tickets.
+export type TicketRule = {
+  id: string | undefined;
+  tenantId: number | undefined;
+  name: string | undefined;
+  enabled: boolean | undefined;
+  sortOrder: number | undefined;
+  // match: ALL (AND) or ANY (OR)
+  match: string | undefined;
+  conditions: RuleCondition[] | undefined;
+  // expression overrides conditions when set (raw CEL).
+  expression: string | undefined;
+  tagKind: string | undefined;
+  tagNames: string[] | undefined;
+  createTime: wellKnownTimestamp | undefined;
+  updateTime: wellKnownTimestamp | undefined;
+};
+
+export type ListRulesRequest = {
+};
+
+export type ListRulesResponse = {
+  rules: TicketRule[] | undefined;
+};
+
+export type GetRuleRequest = {
+  //
+  // Behaviors: REQUIRED
+  id: string | undefined;
+};
+
+export type GetRuleResponse = {
+  rule: TicketRule | undefined;
+};
+
+export type RuleInput = {
+  name: string | undefined;
+  enabled: boolean | undefined;
+  sortOrder: number | undefined;
+  match: string | undefined;
+  conditions: RuleCondition[] | undefined;
+  expression: string | undefined;
+  tagKind: string | undefined;
+  tagNames: string[] | undefined;
+};
+
+export type CreateRuleRequest = {
+  rule: RuleInput | undefined;
+};
+
+export type CreateRuleResponse = {
+  rule: TicketRule | undefined;
+};
+
+export type UpdateRuleRequest = {
+  //
+  // Behaviors: REQUIRED
+  id: string | undefined;
+  rule: RuleInput | undefined;
+};
+
+export type UpdateRuleResponse = {
+  rule: TicketRule | undefined;
+};
+
+export type DeleteRuleRequest = {
+  //
+  // Behaviors: REQUIRED
+  id: string | undefined;
+};
+
+export interface TicketRuleService {
+  ListRules(request: ListRulesRequest): Promise<ListRulesResponse>;
+  GetRule(request: GetRuleRequest): Promise<GetRuleResponse>;
+  CreateRule(request: CreateRuleRequest): Promise<CreateRuleResponse>;
+  UpdateRule(request: UpdateRuleRequest): Promise<UpdateRuleResponse>;
+  DeleteRule(request: DeleteRuleRequest): Promise<wellKnownEmpty>;
+}
+
+export function createTicketRuleServiceClient(
+  handler: RequestHandler
+): TicketRuleService {
+  return {
+    ListRules(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      const path = `v1/rules`; // eslint-disable-line quotes
+      const body = null;
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "GET",
+        body,
+      }, {
+        service: "TicketRuleService",
+        method: "ListRules",
+      }) as Promise<ListRulesResponse>;
+    },
+    GetRule(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!request.id) {
+        throw new Error("missing required field request.id");
+      }
+      const path = `v1/rules/${request.id}`; // eslint-disable-line quotes
+      const body = null;
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "GET",
+        body,
+      }, {
+        service: "TicketRuleService",
+        method: "GetRule",
+      }) as Promise<GetRuleResponse>;
+    },
+    CreateRule(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      const path = `v1/rules`; // eslint-disable-line quotes
+      const body = JSON.stringify(request);
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "POST",
+        body,
+      }, {
+        service: "TicketRuleService",
+        method: "CreateRule",
+      }) as Promise<CreateRuleResponse>;
+    },
+    UpdateRule(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!request.id) {
+        throw new Error("missing required field request.id");
+      }
+      const path = `v1/rules/${request.id}`; // eslint-disable-line quotes
+      const body = JSON.stringify(request);
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "PUT",
+        body,
+      }, {
+        service: "TicketRuleService",
+        method: "UpdateRule",
+      }) as Promise<UpdateRuleResponse>;
+    },
+    DeleteRule(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!request.id) {
+        throw new Error("missing required field request.id");
+      }
+      const path = `v1/rules/${request.id}`; // eslint-disable-line quotes
+      const body = null;
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "DELETE",
+        body,
+      }, {
+        service: "TicketRuleService",
+        method: "DeleteRule",
+      }) as Promise<wellKnownEmpty>;
+    },
+  };
+}
 // Lifecycle states a ticket moves through.
 export type TicketStatus =
   | "TICKET_STATUS_UNSPECIFIED"
@@ -183,6 +371,8 @@ export type Ticket = {
   updateTime: wellKnownTimestamp | undefined;
   // attachments are populated on GetTicket only (not in list responses).
   attachments: TicketAttachment[] | undefined;
+  // tags/categories attached to the ticket (manual or rule-applied).
+  tags: TicketTag[] | undefined;
 };
 
 // TicketAttachment is a file extracted from the inbound email, stored in
@@ -197,6 +387,19 @@ export type TicketAttachment = {
   contentId: string | undefined;
   inline: boolean | undefined;
   downloadUrl: string | undefined;
+  createTime: wellKnownTimestamp | undefined;
+};
+
+// TicketTag is a label (kind=TAG) or category (kind=CATEGORY) attachable to
+// tickets, manually or via rules. Defined here (not in tag.proto) because the
+// Ticket message references it — keeps tag.proto's import one-directional.
+export type TicketTag = {
+  id: string | undefined;
+  tenantId: number | undefined;
+  name: string | undefined;
+  kind: string | undefined;
+  color: string | undefined;
+  description: string | undefined;
   createTime: wellKnownTimestamp | undefined;
 };
 
@@ -450,6 +653,169 @@ export function createTicketServiceClient(
         service: "TicketService",
         method: "UpdateTicketStatus",
       }) as Promise<UpdateTicketStatusResponse>;
+    },
+  };
+}
+export type ListTagsRequest = {
+  kind?: string;
+};
+
+export type ListTagsResponse = {
+  tags: TicketTag[] | undefined;
+};
+
+export type CreateTagRequest = {
+  //
+  // Behaviors: REQUIRED
+  name: string | undefined;
+  kind: string | undefined;
+  color: string | undefined;
+  description: string | undefined;
+};
+
+export type CreateTagResponse = {
+  tag: TicketTag | undefined;
+};
+
+export type UpdateTagRequest = {
+  //
+  // Behaviors: REQUIRED
+  id: string | undefined;
+  name?: string;
+  color?: string;
+  description?: string;
+};
+
+export type UpdateTagResponse = {
+  tag: TicketTag | undefined;
+};
+
+export type DeleteTagRequest = {
+  //
+  // Behaviors: REQUIRED
+  id: string | undefined;
+};
+
+export type SetTicketTagsRequest = {
+  //
+  // Behaviors: REQUIRED
+  ticketId: string | undefined;
+  tagIds: string[] | undefined;
+};
+
+export type SetTicketTagsResponse = {
+  ticket: Ticket | undefined;
+};
+
+export interface TicketTagService {
+  ListTags(request: ListTagsRequest): Promise<ListTagsResponse>;
+  CreateTag(request: CreateTagRequest): Promise<CreateTagResponse>;
+  UpdateTag(request: UpdateTagRequest): Promise<UpdateTagResponse>;
+  DeleteTag(request: DeleteTagRequest): Promise<wellKnownEmpty>;
+  // SetTicketTags replaces a ticket's tags with the given tag ids (manual tagging).
+  SetTicketTags(request: SetTicketTagsRequest): Promise<SetTicketTagsResponse>;
+}
+
+export function createTicketTagServiceClient(
+  handler: RequestHandler
+): TicketTagService {
+  return {
+    ListTags(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      const path = `v1/tags`; // eslint-disable-line quotes
+      const body = null;
+      const queryParams: string[] = [];
+      if (request.kind) {
+        queryParams.push(`kind=${encodeURIComponent(request.kind.toString())}`)
+      }
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "GET",
+        body,
+      }, {
+        service: "TicketTagService",
+        method: "ListTags",
+      }) as Promise<ListTagsResponse>;
+    },
+    CreateTag(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      const path = `v1/tags`; // eslint-disable-line quotes
+      const body = JSON.stringify(request);
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "POST",
+        body,
+      }, {
+        service: "TicketTagService",
+        method: "CreateTag",
+      }) as Promise<CreateTagResponse>;
+    },
+    UpdateTag(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!request.id) {
+        throw new Error("missing required field request.id");
+      }
+      const path = `v1/tags/${request.id}`; // eslint-disable-line quotes
+      const body = JSON.stringify(request);
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "PUT",
+        body,
+      }, {
+        service: "TicketTagService",
+        method: "UpdateTag",
+      }) as Promise<UpdateTagResponse>;
+    },
+    DeleteTag(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!request.id) {
+        throw new Error("missing required field request.id");
+      }
+      const path = `v1/tags/${request.id}`; // eslint-disable-line quotes
+      const body = null;
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "DELETE",
+        body,
+      }, {
+        service: "TicketTagService",
+        method: "DeleteTag",
+      }) as Promise<wellKnownEmpty>;
+    },
+    SetTicketTags(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!request.ticketId) {
+        throw new Error("missing required field request.ticket_id");
+      }
+      const path = `v1/tickets/${request.ticketId}/tags`; // eslint-disable-line quotes
+      const body = JSON.stringify(request);
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "POST",
+        body,
+      }, {
+        service: "TicketTagService",
+        method: "SetTicketTags",
+      }) as Promise<SetTicketTagsResponse>;
     },
   };
 }

@@ -27,6 +27,30 @@ menus:
       - platform:admin
       - tenant:manager
 
+  - id: ticket-tags
+    parent_id: ticket
+    type: MENU
+    name: Tags
+    path: tags
+    component: app/ticket/tags/index.vue
+    icon: lucide:tags
+    order: 2
+    authority:
+      - platform:admin
+      - tenant:manager
+
+  - id: ticket-rules
+    parent_id: ticket
+    type: MENU
+    name: Auto-Tag Rules
+    path: rules
+    component: app/ticket/rules/index.vue
+    icon: lucide:filter
+    order: 3
+    authority:
+      - platform:admin
+      - tenant:manager
+
 permission_groups:
   - name: Ticket
     module: ticket

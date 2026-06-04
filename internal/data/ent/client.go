@@ -18,6 +18,8 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketattachment"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketrule"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/tickettag"
 )
 
 // Client is the client that holds all ent builders.
@@ -31,6 +33,10 @@ type Client struct {
 	TicketAttachment *TicketAttachmentClient
 	// TicketComment is the client for interacting with the TicketComment builders.
 	TicketComment *TicketCommentClient
+	// TicketRule is the client for interacting with the TicketRule builders.
+	TicketRule *TicketRuleClient
+	// TicketTag is the client for interacting with the TicketTag builders.
+	TicketTag *TicketTagClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -45,6 +51,8 @@ func (c *Client) init() {
 	c.Ticket = NewTicketClient(c.config)
 	c.TicketAttachment = NewTicketAttachmentClient(c.config)
 	c.TicketComment = NewTicketCommentClient(c.config)
+	c.TicketRule = NewTicketRuleClient(c.config)
+	c.TicketTag = NewTicketTagClient(c.config)
 }
 
 type (
@@ -140,6 +148,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Ticket:           NewTicketClient(cfg),
 		TicketAttachment: NewTicketAttachmentClient(cfg),
 		TicketComment:    NewTicketCommentClient(cfg),
+		TicketRule:       NewTicketRuleClient(cfg),
+		TicketTag:        NewTicketTagClient(cfg),
 	}, nil
 }
 
@@ -162,6 +172,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Ticket:           NewTicketClient(cfg),
 		TicketAttachment: NewTicketAttachmentClient(cfg),
 		TicketComment:    NewTicketCommentClient(cfg),
+		TicketRule:       NewTicketRuleClient(cfg),
+		TicketTag:        NewTicketTagClient(cfg),
 	}, nil
 }
 
@@ -193,6 +205,8 @@ func (c *Client) Use(hooks ...Hook) {
 	c.Ticket.Use(hooks...)
 	c.TicketAttachment.Use(hooks...)
 	c.TicketComment.Use(hooks...)
+	c.TicketRule.Use(hooks...)
+	c.TicketTag.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
@@ -201,6 +215,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	c.Ticket.Intercept(interceptors...)
 	c.TicketAttachment.Intercept(interceptors...)
 	c.TicketComment.Intercept(interceptors...)
+	c.TicketRule.Intercept(interceptors...)
+	c.TicketTag.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -212,6 +228,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.TicketAttachment.mutate(ctx, m)
 	case *TicketCommentMutation:
 		return c.TicketComment.mutate(ctx, m)
+	case *TicketRuleMutation:
+		return c.TicketRule.mutate(ctx, m)
+	case *TicketTagMutation:
+		return c.TicketTag.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -334,6 +354,22 @@ func (c *TicketClient) QueryComments(_m *Ticket) *TicketCommentQuery {
 			sqlgraph.From(ticket.Table, ticket.FieldID, id),
 			sqlgraph.To(ticketcomment.Table, ticketcomment.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, ticket.CommentsTable, ticket.CommentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTags queries the tags edge of a Ticket.
+func (c *TicketClient) QueryTags(_m *Ticket) *TicketTagQuery {
+	query := (&TicketTagClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ticket.Table, ticket.FieldID, id),
+			sqlgraph.To(tickettag.Table, tickettag.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, ticket.TagsTable, ticket.TagsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -651,12 +687,296 @@ func (c *TicketCommentClient) mutate(ctx context.Context, m *TicketCommentMutati
 	}
 }
 
+// TicketRuleClient is a client for the TicketRule schema.
+type TicketRuleClient struct {
+	config
+}
+
+// NewTicketRuleClient returns a client for the TicketRule from the given config.
+func NewTicketRuleClient(c config) *TicketRuleClient {
+	return &TicketRuleClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ticketrule.Hooks(f(g(h())))`.
+func (c *TicketRuleClient) Use(hooks ...Hook) {
+	c.hooks.TicketRule = append(c.hooks.TicketRule, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ticketrule.Intercept(f(g(h())))`.
+func (c *TicketRuleClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TicketRule = append(c.inters.TicketRule, interceptors...)
+}
+
+// Create returns a builder for creating a TicketRule entity.
+func (c *TicketRuleClient) Create() *TicketRuleCreate {
+	mutation := newTicketRuleMutation(c.config, OpCreate)
+	return &TicketRuleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TicketRule entities.
+func (c *TicketRuleClient) CreateBulk(builders ...*TicketRuleCreate) *TicketRuleCreateBulk {
+	return &TicketRuleCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TicketRuleClient) MapCreateBulk(slice any, setFunc func(*TicketRuleCreate, int)) *TicketRuleCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TicketRuleCreateBulk{err: fmt.Errorf("calling to TicketRuleClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TicketRuleCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TicketRuleCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TicketRule.
+func (c *TicketRuleClient) Update() *TicketRuleUpdate {
+	mutation := newTicketRuleMutation(c.config, OpUpdate)
+	return &TicketRuleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TicketRuleClient) UpdateOne(_m *TicketRule) *TicketRuleUpdateOne {
+	mutation := newTicketRuleMutation(c.config, OpUpdateOne, withTicketRule(_m))
+	return &TicketRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TicketRuleClient) UpdateOneID(id string) *TicketRuleUpdateOne {
+	mutation := newTicketRuleMutation(c.config, OpUpdateOne, withTicketRuleID(id))
+	return &TicketRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TicketRule.
+func (c *TicketRuleClient) Delete() *TicketRuleDelete {
+	mutation := newTicketRuleMutation(c.config, OpDelete)
+	return &TicketRuleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TicketRuleClient) DeleteOne(_m *TicketRule) *TicketRuleDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TicketRuleClient) DeleteOneID(id string) *TicketRuleDeleteOne {
+	builder := c.Delete().Where(ticketrule.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TicketRuleDeleteOne{builder}
+}
+
+// Query returns a query builder for TicketRule.
+func (c *TicketRuleClient) Query() *TicketRuleQuery {
+	return &TicketRuleQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTicketRule},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TicketRule entity by its id.
+func (c *TicketRuleClient) Get(ctx context.Context, id string) (*TicketRule, error) {
+	return c.Query().Where(ticketrule.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TicketRuleClient) GetX(ctx context.Context, id string) *TicketRule {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *TicketRuleClient) Hooks() []Hook {
+	hooks := c.hooks.TicketRule
+	return append(hooks[:len(hooks):len(hooks)], ticketrule.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *TicketRuleClient) Interceptors() []Interceptor {
+	return c.inters.TicketRule
+}
+
+func (c *TicketRuleClient) mutate(ctx context.Context, m *TicketRuleMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TicketRuleCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TicketRuleUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TicketRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TicketRuleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TicketRule mutation op: %q", m.Op())
+	}
+}
+
+// TicketTagClient is a client for the TicketTag schema.
+type TicketTagClient struct {
+	config
+}
+
+// NewTicketTagClient returns a client for the TicketTag from the given config.
+func NewTicketTagClient(c config) *TicketTagClient {
+	return &TicketTagClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `tickettag.Hooks(f(g(h())))`.
+func (c *TicketTagClient) Use(hooks ...Hook) {
+	c.hooks.TicketTag = append(c.hooks.TicketTag, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `tickettag.Intercept(f(g(h())))`.
+func (c *TicketTagClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TicketTag = append(c.inters.TicketTag, interceptors...)
+}
+
+// Create returns a builder for creating a TicketTag entity.
+func (c *TicketTagClient) Create() *TicketTagCreate {
+	mutation := newTicketTagMutation(c.config, OpCreate)
+	return &TicketTagCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TicketTag entities.
+func (c *TicketTagClient) CreateBulk(builders ...*TicketTagCreate) *TicketTagCreateBulk {
+	return &TicketTagCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TicketTagClient) MapCreateBulk(slice any, setFunc func(*TicketTagCreate, int)) *TicketTagCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TicketTagCreateBulk{err: fmt.Errorf("calling to TicketTagClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TicketTagCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TicketTagCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TicketTag.
+func (c *TicketTagClient) Update() *TicketTagUpdate {
+	mutation := newTicketTagMutation(c.config, OpUpdate)
+	return &TicketTagUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TicketTagClient) UpdateOne(_m *TicketTag) *TicketTagUpdateOne {
+	mutation := newTicketTagMutation(c.config, OpUpdateOne, withTicketTag(_m))
+	return &TicketTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TicketTagClient) UpdateOneID(id string) *TicketTagUpdateOne {
+	mutation := newTicketTagMutation(c.config, OpUpdateOne, withTicketTagID(id))
+	return &TicketTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TicketTag.
+func (c *TicketTagClient) Delete() *TicketTagDelete {
+	mutation := newTicketTagMutation(c.config, OpDelete)
+	return &TicketTagDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TicketTagClient) DeleteOne(_m *TicketTag) *TicketTagDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TicketTagClient) DeleteOneID(id string) *TicketTagDeleteOne {
+	builder := c.Delete().Where(tickettag.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TicketTagDeleteOne{builder}
+}
+
+// Query returns a query builder for TicketTag.
+func (c *TicketTagClient) Query() *TicketTagQuery {
+	return &TicketTagQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTicketTag},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TicketTag entity by its id.
+func (c *TicketTagClient) Get(ctx context.Context, id string) (*TicketTag, error) {
+	return c.Query().Where(tickettag.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TicketTagClient) GetX(ctx context.Context, id string) *TicketTag {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTickets queries the tickets edge of a TicketTag.
+func (c *TicketTagClient) QueryTickets(_m *TicketTag) *TicketQuery {
+	query := (&TicketClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tickettag.Table, tickettag.FieldID, id),
+			sqlgraph.To(ticket.Table, ticket.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, tickettag.TicketsTable, tickettag.TicketsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TicketTagClient) Hooks() []Hook {
+	hooks := c.hooks.TicketTag
+	return append(hooks[:len(hooks):len(hooks)], tickettag.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *TicketTagClient) Interceptors() []Interceptor {
+	return c.inters.TicketTag
+}
+
+func (c *TicketTagClient) mutate(ctx context.Context, m *TicketTagMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TicketTagCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TicketTagUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TicketTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TicketTagDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TicketTag mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Ticket, TicketAttachment, TicketComment []ent.Hook
+		Ticket, TicketAttachment, TicketComment, TicketRule, TicketTag []ent.Hook
 	}
 	inters struct {
-		Ticket, TicketAttachment, TicketComment []ent.Interceptor
+		Ticket, TicketAttachment, TicketComment, TicketRule, TicketTag []ent.Interceptor
 	}
 )

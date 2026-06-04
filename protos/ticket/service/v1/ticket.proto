@@ -58,6 +58,21 @@ message Ticket {
   google.protobuf.Timestamp update_time = 17 [json_name = "updateTime"];
   // attachments are populated on GetTicket only (not in list responses).
   repeated TicketAttachment attachments = 19 [json_name = "attachments"];
+  // tags/categories attached to the ticket (manual or rule-applied).
+  repeated TicketTag tags = 20 [json_name = "tags"];
+}
+
+// TicketTag is a label (kind=TAG) or category (kind=CATEGORY) attachable to
+// tickets, manually or via rules. Defined here (not in tag.proto) because the
+// Ticket message references it — keeps tag.proto's import one-directional.
+message TicketTag {
+  string id = 1 [json_name = "id"];
+  uint32 tenant_id = 2 [json_name = "tenantId"];
+  string name = 3 [json_name = "name"];
+  string kind = 4 [json_name = "kind"];
+  string color = 5 [json_name = "color"];
+  string description = 6 [json_name = "description"];
+  google.protobuf.Timestamp create_time = 7 [json_name = "createTime"];
 }
 
 // TicketAttachment is a file extracted from the inbound email, stored in

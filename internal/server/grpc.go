@@ -36,6 +36,8 @@ func NewGRPCServer(
 	ticketSvc *service.TicketService,
 	commentSvc *service.CommentService,
 	userSvc *service.UserService,
+	tagSvc *service.TagService,
+	ruleSvc *service.RuleService,
 ) *grpc.Server {
 	cfg := ctx.GetConfig()
 	l := ctx.NewLoggerHelper("ticket/grpc")
@@ -96,6 +98,8 @@ func NewGRPCServer(
 	ticketpb.RegisterTicketServiceServer(srv, ticketSvc)
 	ticketpb.RegisterTicketCommentServiceServer(srv, commentSvc)
 	ticketpb.RegisterTicketUserServiceServer(srv, userSvc)
+	ticketpb.RegisterTicketTagServiceServer(srv, tagSvc)
+	ticketpb.RegisterTicketRuleServiceServer(srv, ruleSvc)
 
 	return srv
 }

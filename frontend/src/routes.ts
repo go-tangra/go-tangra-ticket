@@ -24,6 +24,26 @@ const routes: RouteRecordRaw[] = [
         },
         component: () => import('./views/tickets/index.vue'),
       },
+      {
+        path: 'tags',
+        name: 'TicketTags',
+        meta: {
+          icon: 'lucide:tags',
+          title: 'ticket.menu.tags',
+          authority: ['platform:admin', 'tenant:manager'],
+        },
+        component: () => import('./views/tags/index.vue'),
+      },
+      {
+        path: 'rules',
+        name: 'TicketRules',
+        meta: {
+          icon: 'lucide:filter',
+          title: 'ticket.menu.rules',
+          authority: ['platform:admin', 'tenant:manager'],
+        },
+        component: () => import('./views/rules/index.vue'),
+      },
     ],
   },
 ];

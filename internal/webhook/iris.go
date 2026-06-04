@@ -5,6 +5,7 @@ package webhook
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/go-tangra/go-tangra-common/viewer"
 	"github.com/go-tangra/go-tangra-ticket/internal/data"
 	"github.com/go-tangra/go-tangra-ticket/internal/metrics"
+	"github.com/go-tangra/go-tangra-ticket/internal/rules"
 )
 
 const maxBodyBytes = 10 << 20 // 10 MiB
@@ -32,12 +34,15 @@ type IrisHandler struct {
 	repo     *data.TicketRepo
 	attach   *data.AttachmentRepo
 	storage  *data.StorageClient
+	tags     *data.TagRepo
+	ruleRepo *data.RuleRepo
+	engine   *rules.Engine
 	metrics  *metrics.Collector
 	token    string
 	tenantID uint32
 }
 
-func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, attach *data.AttachmentRepo, storage *data.StorageClient, m *metrics.Collector) *IrisHandler {
+func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, attach *data.AttachmentRepo, storage *data.StorageClient, tags *data.TagRepo, ruleRepo *data.RuleRepo, engine *rules.Engine, m *metrics.Collector) *IrisHandler {
 	tid := uint32(0)
 	if v := os.Getenv("TICKET_DEFAULT_TENANT"); v != "" {
 		if n, err := strconv.ParseUint(v, 10, 32); err == nil {
@@ -49,6 +54,9 @@ func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, attach *data.
 		repo:     repo,
 		attach:   attach,
 		storage:  storage,
+		tags:     tags,
+		ruleRepo: ruleRepo,
+		engine:   engine,
 		metrics:  m,
 		token:    os.Getenv("TICKET_WEBHOOK_TOKEN"),
 		tenantID: tid,
@@ -140,9 +148,70 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.storeAttachments(ctx, e.ID, pm.attachments)
+	h.applyRules(ctx, e.ID, pm, recipient)
 
 	h.log.Infof("iris webhook: created ticket %s from %q (subject=%q, attachments=%d)", e.ID, fromEmail, subject, len(pm.attachments))
 	writeOK(w)
+}
+
+// applyRules evaluates enabled auto-tagging rules against the parsed email and
+// applies the matching rules' tags (ensure-creating them). Best-effort.
+func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsedMail, recipient string) {
+	if h.ruleRepo == nil || h.tags == nil || h.engine == nil {
+		return
+	}
+	rls, err := h.ruleRepo.ListEnabled(ctx, h.tenantID)
+	if err != nil || len(rls) == 0 {
+		return
+	}
+	email := rules.Email{
+		Subject:   pm.subject,
+		Body:      pm.text,
+		From:      pm.fromEmail,
+		FromName:  pm.fromName,
+		Recipient: recipient,
+	}
+	seen := map[string]bool{}
+	var tagIDs []string
+	for _, r := range rls {
+		expr := r.Expression
+		if expr == "" {
+			var conds []rules.Condition
+			if r.Conditions != "" {
+				_ = json.Unmarshal([]byte(r.Conditions), &conds)
+			}
+			expr = rules.BuildExpression(r.Match, conds)
+		}
+		ok, eerr := h.engine.Eval(expr, email)
+		if eerr != nil {
+			h.log.Warnf("iris webhook: rule %q eval failed: %v", r.Name, eerr)
+			continue
+		}
+		if !ok {
+			continue
+		}
+		var names []string
+		if r.TagNames != "" {
+			_ = json.Unmarshal([]byte(r.TagNames), &names)
+		}
+		for _, n := range names {
+			if n == "" {
+				continue
+			}
+			tag, terr := h.tags.EnsureByName(ctx, h.tenantID, r.TagKind, n)
+			if terr != nil || tag == nil || seen[tag.ID] {
+				continue
+			}
+			seen[tag.ID] = true
+			tagIDs = append(tagIDs, tag.ID)
+		}
+		h.log.Infof("iris webhook: rule %q matched ticket %s", r.Name, ticketID)
+	}
+	if len(tagIDs) > 0 {
+		if err := h.tags.AddTicketTags(ctx, ticketID, tagIDs); err != nil {
+			h.log.Warnf("iris webhook: apply tags to %s failed: %v", ticketID, err)
+		}
+	}
 }
 
 // storeAttachments uploads each decoded attachment to S3 and records it.

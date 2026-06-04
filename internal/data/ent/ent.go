@@ -15,6 +15,8 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketattachment"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketrule"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/tickettag"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -78,6 +80,8 @@ func checkColumn(t, c string) error {
 			ticket.Table:           ticket.ValidColumn,
 			ticketattachment.Table: ticketattachment.ValidColumn,
 			ticketcomment.Table:    ticketcomment.ValidColumn,
+			ticketrule.Table:       ticketrule.ValidColumn,
+			tickettag.Table:        tickettag.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

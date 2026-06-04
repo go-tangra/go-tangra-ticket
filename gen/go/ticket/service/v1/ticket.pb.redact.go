@@ -166,6 +166,30 @@ func (x *Ticket) Redact() string {
 	// Safe field: UpdateTime
 
 	// Safe field: Attachments
+
+	// Safe field: Tags
+	return x.String()
+}
+
+// Redact method implementation for TicketTag
+func (x *TicketTag) Redact() string {
+	if x == nil {
+		return ""
+	}
+
+	// Safe field: Id
+
+	// Safe field: TenantId
+
+	// Safe field: Name
+
+	// Safe field: Kind
+
+	// Safe field: Color
+
+	// Safe field: Description
+
+	// Safe field: CreateTime
 	return x.String()
 }
 

@@ -65,6 +65,10 @@ func (Ticket) Fields() []ent.Field {
 func (Ticket) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("comments", TicketComment.Type),
+		// Explicit join-table name: the default ("ticket_tags") would clash
+		// with the TicketTag entity's own table.
+		edge.To("tags", TicketTag.Type).
+			StorageKey(edge.Table("ticket_tag_links")),
 	}
 }
 

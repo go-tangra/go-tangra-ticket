@@ -18,6 +18,10 @@ type Tx struct {
 	TicketAttachment *TicketAttachmentClient
 	// TicketComment is the client for interacting with the TicketComment builders.
 	TicketComment *TicketCommentClient
+	// TicketRule is the client for interacting with the TicketRule builders.
+	TicketRule *TicketRuleClient
+	// TicketTag is the client for interacting with the TicketTag builders.
+	TicketTag *TicketTagClient
 
 	// lazily loaded.
 	client     *Client
@@ -152,6 +156,8 @@ func (tx *Tx) init() {
 	tx.Ticket = NewTicketClient(tx.config)
 	tx.TicketAttachment = NewTicketAttachmentClient(tx.config)
 	tx.TicketComment = NewTicketCommentClient(tx.config)
+	tx.TicketRule = NewTicketRuleClient(tx.config)
+	tx.TicketTag = NewTicketTagClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

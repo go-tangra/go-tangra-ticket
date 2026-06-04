@@ -20,6 +20,7 @@ import type {
   TicketStatus,
 } from '../../api/client';
 import { useTicketStore } from '../../stores/ticket.state';
+import { tagColor } from '../rules/helpers';
 import {
   humanizeEnum,
   priorityColor,
@@ -119,6 +120,7 @@ const columns = [
   { title: $t('ticket.page.ticket.subject'), dataIndex: 'subject', key: 'subject', ellipsis: true },
   { title: $t('ticket.page.ticket.status'), key: 'status', width: 130 },
   { title: $t('ticket.page.ticket.priority'), key: 'priority', width: 110 },
+  { title: $t('ticket.page.ticket.tags'), key: 'tags', width: 180 },
   { title: $t('ticket.page.ticket.requester'), key: 'requester', width: 200 },
   { title: $t('ticket.page.ticket.assignee'), key: 'assignee', width: 150 },
   { title: $t('ticket.page.ticket.created'), key: 'createTime', width: 170 },
@@ -185,6 +187,17 @@ onMounted(() => {
         </template>
         <template v-else-if="column.key === 'priority'">
           <Tag :color="priorityColor(record.priority)">{{ humanizeEnum(record.priority) }}</Tag>
+        </template>
+        <template v-else-if="column.key === 'tags'">
+          <Tag
+            v-for="t in record.tags || []"
+            :key="t.id"
+            :color="tagColor(t.color, t.name)"
+            style="margin-bottom: 2px"
+          >
+            {{ t.name }}
+          </Tag>
+          <span v-if="!record.tags || !record.tags.length" style="color: #ccc">—</span>
         </template>
         <template v-else-if="column.key === 'requester'">
           {{ record.requesterName || record.requesterEmail || '—' }}

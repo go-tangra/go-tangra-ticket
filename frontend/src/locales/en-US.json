@@ -1,7 +1,15 @@
 {
   "menu": {
     "ticket": "Tickets",
-    "tickets": "Tickets"
+    "tickets": "Tickets",
+    "tags": "Tags",
+    "rules": "Auto-Tag Rules"
+  },
+  "action": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel"
   },
   "page": {
     "ticket": {
@@ -9,6 +17,9 @@
       "subject": "Subject",
       "status": "Status",
       "priority": "Priority",
+      "tags": "Tags",
+      "tagsPlaceholder": "Select tags",
+      "tagsSuccess": "Tags updated",
       "requester": "Requester",
       "assignee": "Assignee",
       "source": "Source",
@@ -27,6 +38,50 @@
       "commentSuccess": "Comment added",
       "deleteSuccess": "Ticket deleted",
       "confirmDelete": "Delete this ticket?"
+    },
+    "tag": {
+      "title": "Tags",
+      "create": "New Tag",
+      "edit": "Edit Tag",
+      "name": "Name",
+      "kind": "Kind",
+      "tag": "Tag",
+      "category": "Category",
+      "color": "Color",
+      "description": "Description",
+      "confirmDelete": "Delete this tag? It will be removed from all tickets.",
+      "saveSuccess": "Tag saved",
+      "deleteSuccess": "Tag deleted",
+      "nameRequired": "Name is required"
+    },
+    "rule": {
+      "title": "Auto-Tag Rules",
+      "hint": "Rules run automatically when a ticket is created from email. The first matching tags are applied.",
+      "create": "New Rule",
+      "edit": "Edit Rule",
+      "name": "Rule name",
+      "enabled": "Enabled",
+      "sortOrder": "Order",
+      "match": "Match",
+      "when": "When incoming email matches",
+      "then": "Then apply",
+      "and": "AND",
+      "or": "OR",
+      "conditions": "Conditions",
+      "addCondition": "Add condition",
+      "conditionRequired": "Add at least one condition with a value",
+      "field": "Field",
+      "operator": "Operator",
+      "value": "Value",
+      "tags": "Tags",
+      "tagKind": "Apply as",
+      "tagsPlaceholder": "Type a tag name and press Enter",
+      "tagsHint": "Tags are created automatically if they don't exist yet.",
+      "tagsRequired": "Add at least one tag to apply",
+      "confirmDelete": "Delete this rule?",
+      "saveSuccess": "Rule saved",
+      "deleteSuccess": "Rule deleted",
+      "nameRequired": "Rule name is required"
     }
   }
 }

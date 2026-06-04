@@ -2,7 +2,9 @@ import { useAccessStore } from 'shell/vben/stores';
 
 import {
   createTicketCommentServiceClient,
+  createTicketRuleServiceClient,
   createTicketServiceClient,
+  createTicketTagServiceClient,
   createTicketUserServiceClient,
 } from '../generated/api/ticket/service/v1';
 
@@ -43,6 +45,8 @@ async function handler(req: RequestType): Promise<unknown> {
 export const ticketService = createTicketServiceClient(handler);
 export const commentService = createTicketCommentServiceClient(handler);
 export const userService = createTicketUserServiceClient(handler);
+export const tagService = createTicketTagServiceClient(handler);
+export const ruleService = createTicketRuleServiceClient(handler);
 
 // Re-export generated types for convenience.
 export type {
@@ -50,9 +54,15 @@ export type {
   TicketComment,
   TicketStatus,
   TicketPriority,
+  TicketTag,
+  TicketRule,
+  RuleCondition,
+  RuleInput,
   AssignableUser,
   ListTicketsRequest,
   ListTicketsResponse,
   ListCommentsResponse,
   ListAssignableUsersResponse,
+  ListTagsResponse,
+  ListRulesResponse,
 } from '../generated/api/ticket/service/v1';

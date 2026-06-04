@@ -9,6 +9,8 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketattachment"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketrule"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/tickettag"
 
 	"entgo.io/ent"
 	"entgo.io/ent/privacy"
@@ -136,6 +138,78 @@ func init() {
 	ticketcommentDescID := ticketcommentFields[0].Descriptor()
 	// ticketcomment.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	ticketcomment.IDValidator = ticketcommentDescID.Validators[0].(func(string) error)
+	ticketruleMixin := schema.TicketRule{}.Mixin()
+	ticketrule.Policy = privacy.NewPolicies(ticketruleMixin[1], schema.TicketRule{})
+	ticketrule.Hooks[0] = func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+			if err := ticketrule.Policy.EvalMutation(ctx, m); err != nil {
+				return nil, err
+			}
+			return next.Mutate(ctx, m)
+		})
+	}
+	ticketruleMixinFields1 := ticketruleMixin[1].Fields()
+	_ = ticketruleMixinFields1
+	ticketruleFields := schema.TicketRule{}.Fields()
+	_ = ticketruleFields
+	// ticketruleDescTenantID is the schema descriptor for tenant_id field.
+	ticketruleDescTenantID := ticketruleMixinFields1[0].Descriptor()
+	// ticketrule.DefaultTenantID holds the default value on creation for the tenant_id field.
+	ticketrule.DefaultTenantID = ticketruleDescTenantID.Default.(uint32)
+	// ticketruleDescName is the schema descriptor for name field.
+	ticketruleDescName := ticketruleFields[1].Descriptor()
+	// ticketrule.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	ticketrule.NameValidator = ticketruleDescName.Validators[0].(func(string) error)
+	// ticketruleDescEnabled is the schema descriptor for enabled field.
+	ticketruleDescEnabled := ticketruleFields[2].Descriptor()
+	// ticketrule.DefaultEnabled holds the default value on creation for the enabled field.
+	ticketrule.DefaultEnabled = ticketruleDescEnabled.Default.(bool)
+	// ticketruleDescSortOrder is the schema descriptor for sort_order field.
+	ticketruleDescSortOrder := ticketruleFields[3].Descriptor()
+	// ticketrule.DefaultSortOrder holds the default value on creation for the sort_order field.
+	ticketrule.DefaultSortOrder = ticketruleDescSortOrder.Default.(int)
+	// ticketruleDescMatch is the schema descriptor for match field.
+	ticketruleDescMatch := ticketruleFields[4].Descriptor()
+	// ticketrule.DefaultMatch holds the default value on creation for the match field.
+	ticketrule.DefaultMatch = ticketruleDescMatch.Default.(string)
+	// ticketruleDescTagKind is the schema descriptor for tag_kind field.
+	ticketruleDescTagKind := ticketruleFields[7].Descriptor()
+	// ticketrule.DefaultTagKind holds the default value on creation for the tag_kind field.
+	ticketrule.DefaultTagKind = ticketruleDescTagKind.Default.(string)
+	// ticketruleDescID is the schema descriptor for id field.
+	ticketruleDescID := ticketruleFields[0].Descriptor()
+	// ticketrule.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	ticketrule.IDValidator = ticketruleDescID.Validators[0].(func(string) error)
+	tickettagMixin := schema.TicketTag{}.Mixin()
+	tickettag.Policy = privacy.NewPolicies(tickettagMixin[1], schema.TicketTag{})
+	tickettag.Hooks[0] = func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+			if err := tickettag.Policy.EvalMutation(ctx, m); err != nil {
+				return nil, err
+			}
+			return next.Mutate(ctx, m)
+		})
+	}
+	tickettagMixinFields1 := tickettagMixin[1].Fields()
+	_ = tickettagMixinFields1
+	tickettagFields := schema.TicketTag{}.Fields()
+	_ = tickettagFields
+	// tickettagDescTenantID is the schema descriptor for tenant_id field.
+	tickettagDescTenantID := tickettagMixinFields1[0].Descriptor()
+	// tickettag.DefaultTenantID holds the default value on creation for the tenant_id field.
+	tickettag.DefaultTenantID = tickettagDescTenantID.Default.(uint32)
+	// tickettagDescName is the schema descriptor for name field.
+	tickettagDescName := tickettagFields[1].Descriptor()
+	// tickettag.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	tickettag.NameValidator = tickettagDescName.Validators[0].(func(string) error)
+	// tickettagDescKind is the schema descriptor for kind field.
+	tickettagDescKind := tickettagFields[2].Descriptor()
+	// tickettag.DefaultKind holds the default value on creation for the kind field.
+	tickettag.DefaultKind = tickettagDescKind.Default.(string)
+	// tickettagDescID is the schema descriptor for id field.
+	tickettagDescID := tickettagFields[0].Descriptor()
+	// tickettag.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	tickettag.IDValidator = tickettagDescID.Validators[0].(func(string) error)
 }
 
 const (

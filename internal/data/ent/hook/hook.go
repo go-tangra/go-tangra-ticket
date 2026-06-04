@@ -45,6 +45,30 @@ func (f TicketCommentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TicketCommentMutation", m)
 }
 
+// The TicketRuleFunc type is an adapter to allow the use of ordinary
+// function as TicketRule mutator.
+type TicketRuleFunc func(context.Context, *ent.TicketRuleMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TicketRuleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TicketRuleMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TicketRuleMutation", m)
+}
+
+// The TicketTagFunc type is an adapter to allow the use of ordinary
+// function as TicketTag mutator.
+type TicketTagFunc func(context.Context, *ent.TicketTagMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TicketTagFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TicketTagMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TicketTagMutation", m)
+}
+
 // Condition is a hook condition function.
 type Condition func(context.Context, ent.Mutation) bool
 

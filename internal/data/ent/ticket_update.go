@@ -14,6 +14,7 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/predicate"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/tickettag"
 )
 
 // TicketUpdate is the builder for updating Ticket entities.
@@ -309,6 +310,21 @@ func (_u *TicketUpdate) AddComments(v ...*TicketComment) *TicketUpdate {
 	return _u.AddCommentIDs(ids...)
 }
 
+// AddTagIDs adds the "tags" edge to the TicketTag entity by IDs.
+func (_u *TicketUpdate) AddTagIDs(ids ...string) *TicketUpdate {
+	_u.mutation.AddTagIDs(ids...)
+	return _u
+}
+
+// AddTags adds the "tags" edges to the TicketTag entity.
+func (_u *TicketUpdate) AddTags(v ...*TicketTag) *TicketUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTagIDs(ids...)
+}
+
 // Mutation returns the TicketMutation object of the builder.
 func (_u *TicketUpdate) Mutation() *TicketMutation {
 	return _u.mutation
@@ -333,6 +349,27 @@ func (_u *TicketUpdate) RemoveComments(v ...*TicketComment) *TicketUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCommentIDs(ids...)
+}
+
+// ClearTags clears all "tags" edges to the TicketTag entity.
+func (_u *TicketUpdate) ClearTags() *TicketUpdate {
+	_u.mutation.ClearTags()
+	return _u
+}
+
+// RemoveTagIDs removes the "tags" edge to TicketTag entities by IDs.
+func (_u *TicketUpdate) RemoveTagIDs(ids ...string) *TicketUpdate {
+	_u.mutation.RemoveTagIDs(ids...)
+	return _u
+}
+
+// RemoveTags removes "tags" edges to TicketTag entities.
+func (_u *TicketUpdate) RemoveTags(v ...*TicketTag) *TicketUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTagIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -509,6 +546,51 @@ func (_u *TicketUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(ticketcomment.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   ticket.TagsTable,
+			Columns: ticket.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tickettag.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTagsIDs(); len(nodes) > 0 && !_u.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   ticket.TagsTable,
+			Columns: ticket.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tickettag.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   ticket.TagsTable,
+			Columns: ticket.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tickettag.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -817,6 +899,21 @@ func (_u *TicketUpdateOne) AddComments(v ...*TicketComment) *TicketUpdateOne {
 	return _u.AddCommentIDs(ids...)
 }
 
+// AddTagIDs adds the "tags" edge to the TicketTag entity by IDs.
+func (_u *TicketUpdateOne) AddTagIDs(ids ...string) *TicketUpdateOne {
+	_u.mutation.AddTagIDs(ids...)
+	return _u
+}
+
+// AddTags adds the "tags" edges to the TicketTag entity.
+func (_u *TicketUpdateOne) AddTags(v ...*TicketTag) *TicketUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTagIDs(ids...)
+}
+
 // Mutation returns the TicketMutation object of the builder.
 func (_u *TicketUpdateOne) Mutation() *TicketMutation {
 	return _u.mutation
@@ -841,6 +938,27 @@ func (_u *TicketUpdateOne) RemoveComments(v ...*TicketComment) *TicketUpdateOne 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCommentIDs(ids...)
+}
+
+// ClearTags clears all "tags" edges to the TicketTag entity.
+func (_u *TicketUpdateOne) ClearTags() *TicketUpdateOne {
+	_u.mutation.ClearTags()
+	return _u
+}
+
+// RemoveTagIDs removes the "tags" edge to TicketTag entities by IDs.
+func (_u *TicketUpdateOne) RemoveTagIDs(ids ...string) *TicketUpdateOne {
+	_u.mutation.RemoveTagIDs(ids...)
+	return _u
+}
+
+// RemoveTags removes "tags" edges to TicketTag entities.
+func (_u *TicketUpdateOne) RemoveTags(v ...*TicketTag) *TicketUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTagIDs(ids...)
 }
 
 // Where appends a list predicates to the TicketUpdate builder.
@@ -1047,6 +1165,51 @@ func (_u *TicketUpdateOne) sqlSave(ctx context.Context) (_node *Ticket, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(ticketcomment.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   ticket.TagsTable,
+			Columns: ticket.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tickettag.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTagsIDs(); len(nodes) > 0 && !_u.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   ticket.TagsTable,
+			Columns: ticket.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tickettag.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   ticket.TagsTable,
+			Columns: ticket.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tickettag.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

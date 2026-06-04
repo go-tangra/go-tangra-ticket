@@ -1,12 +1,14 @@
 package service
 
 import (
+	"encoding/json"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	ticketpb "github.com/go-tangra/go-tangra-ticket/gen/go/ticket/service/v1"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent"
+	"github.com/go-tangra/go-tangra-ticket/internal/rules"
 )
 
 func u32(p *uint32) uint32 {
@@ -44,7 +46,7 @@ func ticketToProto(e *ent.Ticket, commentCount int32, assigneeName string) *tick
 	if e == nil {
 		return nil
 	}
-	return &ticketpb.Ticket{
+	out := &ticketpb.Ticket{
 		Id:             e.ID,
 		TenantId:       u32(e.TenantID),
 		ExternalId:     e.ExternalID,
@@ -64,6 +66,63 @@ func ticketToProto(e *ent.Ticket, commentCount int32, assigneeName string) *tick
 		CreateTime:     ts(e.CreateTime),
 		UpdateTime:     ts(e.UpdateTime),
 	}
+	for _, tg := range e.Edges.Tags {
+		out.Tags = append(out.Tags, tagToProto(tg))
+	}
+	return out
+}
+
+func tagToProto(e *ent.TicketTag) *ticketpb.TicketTag {
+	if e == nil {
+		return nil
+	}
+	return &ticketpb.TicketTag{
+		Id:          e.ID,
+		TenantId:    u32(e.TenantID),
+		Name:        e.Name,
+		Kind:        e.Kind,
+		Color:       e.Color,
+		Description: e.Description,
+		CreateTime:  ts(e.CreateTime),
+	}
+}
+
+func ruleToProto(e *ent.TicketRule) *ticketpb.TicketRule {
+	if e == nil {
+		return nil
+	}
+	r := &ticketpb.TicketRule{
+		Id:         e.ID,
+		TenantId:   u32(e.TenantID),
+		Name:       e.Name,
+		Enabled:    e.Enabled,
+		SortOrder:  int32(e.SortOrder),
+		Match:      e.Match,
+		Expression: e.Expression,
+		TagKind:    e.TagKind,
+		TagNames:   jsonStrings(e.TagNames),
+		CreateTime: ts(e.CreateTime),
+		UpdateTime: ts(e.UpdateTime),
+	}
+	var conds []rules.Condition
+	if e.Conditions != "" {
+		_ = json.Unmarshal([]byte(e.Conditions), &conds)
+	}
+	for _, c := range conds {
+		r.Conditions = append(r.Conditions, &ticketpb.RuleCondition{
+			Field: c.Field, Operator: c.Operator, Value: c.Value,
+		})
+	}
+	return r
+}
+
+func jsonStrings(s string) []string {
+	if s == "" {
+		return nil
+	}
+	var out []string
+	_ = json.Unmarshal([]byte(s), &out)
+	return out
 }
 
 func attachmentToProto(e *ent.TicketAttachment) *ticketpb.TicketAttachment {

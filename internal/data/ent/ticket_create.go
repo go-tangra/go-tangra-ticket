@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/tickettag"
 )
 
 // TicketCreate is the builder for creating a Ticket entity.
@@ -261,6 +262,21 @@ func (_c *TicketCreate) AddComments(v ...*TicketComment) *TicketCreate {
 	return _c.AddCommentIDs(ids...)
 }
 
+// AddTagIDs adds the "tags" edge to the TicketTag entity by IDs.
+func (_c *TicketCreate) AddTagIDs(ids ...string) *TicketCreate {
+	_c.mutation.AddTagIDs(ids...)
+	return _c
+}
+
+// AddTags adds the "tags" edges to the TicketTag entity.
+func (_c *TicketCreate) AddTags(v ...*TicketTag) *TicketCreate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTagIDs(ids...)
+}
+
 // Mutation returns the TicketMutation object of the builder.
 func (_c *TicketCreate) Mutation() *TicketMutation {
 	return _c.mutation
@@ -457,6 +473,22 @@ func (_c *TicketCreate) createSpec() (*Ticket, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(ticketcomment.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   ticket.TagsTable,
+			Columns: ticket.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tickettag.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

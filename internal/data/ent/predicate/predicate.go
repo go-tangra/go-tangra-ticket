@@ -14,3 +14,9 @@ type TicketAttachment func(*sql.Selector)
 
 // TicketComment is the predicate function for ticketcomment builders.
 type TicketComment func(*sql.Selector)
+
+// TicketRule is the predicate function for ticketrule builders.
+type TicketRule func(*sql.Selector)
+
+// TicketTag is the predicate function for tickettag builders.
+type TicketTag func(*sql.Selector)

@@ -129,11 +129,103 @@ var (
 			},
 		},
 	}
+	// TicketRulesColumns holds the columns for the "ticket_rules" table.
+	TicketRulesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, Comment: "UUID primary key"},
+		{Name: "create_time", Type: field.TypeTime, Nullable: true, Comment: "创建时间"},
+		{Name: "update_time", Type: field.TypeTime, Nullable: true, Comment: "更新时间"},
+		{Name: "delete_time", Type: field.TypeTime, Nullable: true, Comment: "删除时间"},
+		{Name: "tenant_id", Type: field.TypeUint32, Nullable: true, Comment: "租户ID", Default: 0},
+		{Name: "name", Type: field.TypeString},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "sort_order", Type: field.TypeInt, Comment: "Evaluation order (lower first)", Default: 0},
+		{Name: "match", Type: field.TypeString, Comment: "ALL (AND) or ANY (OR)", Default: "ALL"},
+		{Name: "conditions", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "JSON: [{field,operator,value}]"},
+		{Name: "expression", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "Optional raw CEL expression (overrides conditions)"},
+		{Name: "tag_kind", Type: field.TypeString, Comment: "Kind of tag created/applied: TAG or CATEGORY", Default: "TAG"},
+		{Name: "tag_names", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "JSON: tag names to apply when the rule matches"},
+	}
+	// TicketRulesTable holds the schema information for the "ticket_rules" table.
+	TicketRulesTable = &schema.Table{
+		Name:       "ticket_rules",
+		Columns:    TicketRulesColumns,
+		PrimaryKey: []*schema.Column{TicketRulesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ticketrule_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{TicketRulesColumns[4]},
+			},
+			{
+				Name:    "ticketrule_tenant_id_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{TicketRulesColumns[4], TicketRulesColumns[6]},
+			},
+		},
+	}
+	// TicketTagsColumns holds the columns for the "ticket_tags" table.
+	TicketTagsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, Comment: "UUID primary key"},
+		{Name: "create_time", Type: field.TypeTime, Nullable: true, Comment: "创建时间"},
+		{Name: "update_time", Type: field.TypeTime, Nullable: true, Comment: "更新时间"},
+		{Name: "delete_time", Type: field.TypeTime, Nullable: true, Comment: "删除时间"},
+		{Name: "tenant_id", Type: field.TypeUint32, Nullable: true, Comment: "租户ID", Default: 0},
+		{Name: "name", Type: field.TypeString},
+		{Name: "kind", Type: field.TypeString, Comment: "TAG or CATEGORY", Default: "TAG"},
+		{Name: "color", Type: field.TypeString, Nullable: true},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+	}
+	// TicketTagsTable holds the schema information for the "ticket_tags" table.
+	TicketTagsTable = &schema.Table{
+		Name:       "ticket_tags",
+		Columns:    TicketTagsColumns,
+		PrimaryKey: []*schema.Column{TicketTagsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "tickettag_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{TicketTagsColumns[4]},
+			},
+			{
+				Name:    "tickettag_tenant_id_kind_name",
+				Unique:  true,
+				Columns: []*schema.Column{TicketTagsColumns[4], TicketTagsColumns[6], TicketTagsColumns[5]},
+			},
+		},
+	}
+	// TicketTagLinksColumns holds the columns for the "ticket_tag_links" table.
+	TicketTagLinksColumns = []*schema.Column{
+		{Name: "ticket_id", Type: field.TypeString},
+		{Name: "ticket_tag_id", Type: field.TypeString},
+	}
+	// TicketTagLinksTable holds the schema information for the "ticket_tag_links" table.
+	TicketTagLinksTable = &schema.Table{
+		Name:       "ticket_tag_links",
+		Columns:    TicketTagLinksColumns,
+		PrimaryKey: []*schema.Column{TicketTagLinksColumns[0], TicketTagLinksColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ticket_tag_links_ticket_id",
+				Columns:    []*schema.Column{TicketTagLinksColumns[0]},
+				RefColumns: []*schema.Column{TicketTicketsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "ticket_tag_links_ticket_tag_id",
+				Columns:    []*schema.Column{TicketTagLinksColumns[1]},
+				RefColumns: []*schema.Column{TicketTagsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		TicketTicketsTable,
 		TicketAttachmentsTable,
 		TicketCommentsTable,
+		TicketRulesTable,
+		TicketTagsTable,
+		TicketTagLinksTable,
 	}
 )
 
@@ -148,4 +240,12 @@ func init() {
 	TicketCommentsTable.Annotation = &entsql.Annotation{
 		Table: "ticket_comments",
 	}
+	TicketRulesTable.Annotation = &entsql.Annotation{
+		Table: "ticket_rules",
+	}
+	TicketTagsTable.Annotation = &entsql.Annotation{
+		Table: "ticket_tags",
+	}
+	TicketTagLinksTable.ForeignKeys[0].RefTable = TicketTicketsTable
+	TicketTagLinksTable.ForeignKeys[1].RefTable = TicketTagsTable
 }

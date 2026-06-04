@@ -12,6 +12,7 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/client"
 	"github.com/go-tangra/go-tangra-ticket/internal/data"
 	"github.com/go-tangra/go-tangra-ticket/internal/metrics"
+	"github.com/go-tangra/go-tangra-ticket/internal/rules"
 	"github.com/go-tangra/go-tangra-ticket/internal/server"
 	"github.com/go-tangra/go-tangra-ticket/internal/service"
 	"github.com/go-tangra/go-tangra-ticket/internal/webhook"
@@ -41,14 +42,24 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	userService := service.NewUserService(context, adminClient)
-	grpcServer := server.NewGRPCServer(context, certManager, ticketService, commentService, userService)
+	tagRepo := data.NewTagRepo(context, entClient)
+	tagService := service.NewTagService(context, tagRepo, ticketRepo)
+	ruleRepo := data.NewRuleRepo(context, entClient)
+	engine, err := rules.NewEngine()
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	ruleService := service.NewRuleService(context, ruleRepo, engine)
+	grpcServer := server.NewGRPCServer(context, certManager, ticketService, commentService, userService, tagService, ruleService)
 	storageClient, cleanup3, err := data.NewStorageClient(context)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	irisHandler := webhook.NewIrisHandler(context, ticketRepo, attachmentRepo, storageClient, collector)
+	irisHandler := webhook.NewIrisHandler(context, ticketRepo, attachmentRepo, storageClient, tagRepo, ruleRepo, engine, collector)
 	httpServer := server.NewHTTPServer(context, irisHandler, attachmentRepo, storageClient)
 	registrationClient, err := data.NewRegistrationClient(context)
 	if err != nil {
