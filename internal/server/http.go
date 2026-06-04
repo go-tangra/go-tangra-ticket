@@ -44,8 +44,9 @@ func NewHTTPServer(
 
 	// Attachment download: GET /attachments/{id}. Reached via the admin
 	// gateway asset proxy (/modules/ticket/attachments/{id}). The id is an
-	// unguessable UUID.
-	srv.HandleFunc("/attachments/", attachmentHandler(ctx, attach, storage))
+	// unguessable UUID. HandlePrefix (not HandleFunc) so the {id} subpath
+	// matches instead of falling through to the frontend fileserver.
+	srv.HandlePrefix("/attachments/", attachmentHandler(ctx, attach, storage))
 
 	// Embedded module-federation frontend (remoteEntry.js + assets).
 	if sub, err := fs.Sub(assets.FrontendDist, "frontend-dist"); err == nil {
