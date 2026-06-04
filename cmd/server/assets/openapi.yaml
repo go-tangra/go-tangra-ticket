@@ -1,0 +1,518 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: ""
+    version: 0.0.1
+paths:
+    /v1/assignable-users:
+        get:
+            tags:
+                - TicketUserService
+            description: |-
+                ListAssignableUsers returns the users (in the caller's tenant) a ticket
+                 can be assigned to. Proxied to admin-service.
+            operationId: TicketUserService_ListAssignableUsers
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListAssignableUsersResponse'
+    /v1/comments/{id}:
+        delete:
+            tags:
+                - TicketCommentService
+            operationId: TicketCommentService_DeleteComment
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /v1/tickets:
+        get:
+            tags:
+                - TicketService
+            operationId: TicketService_ListTickets
+            parameters:
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: status
+                  in: query
+                  schema:
+                    enum:
+                        - TICKET_STATUS_UNSPECIFIED
+                        - TICKET_STATUS_OPEN
+                        - TICKET_STATUS_IN_PROGRESS
+                        - TICKET_STATUS_PENDING
+                        - TICKET_STATUS_RESOLVED
+                        - TICKET_STATUS_CLOSED
+                    type: string
+                    format: enum
+                - name: priority
+                  in: query
+                  schema:
+                    enum:
+                        - TICKET_PRIORITY_UNSPECIFIED
+                        - TICKET_PRIORITY_LOW
+                        - TICKET_PRIORITY_NORMAL
+                        - TICKET_PRIORITY_HIGH
+                        - TICKET_PRIORITY_URGENT
+                    type: string
+                    format: enum
+                - name: assigneeId
+                  in: query
+                  description: 'assignee_id filter: omit for all; -1 (4294967295) reserved for "unassigned".'
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: query
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListTicketsResponse'
+        post:
+            tags:
+                - TicketService
+            operationId: TicketService_CreateTicket
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateTicketRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateTicketResponse'
+    /v1/tickets/{id}:
+        get:
+            tags:
+                - TicketService
+            operationId: TicketService_GetTicket
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetTicketResponse'
+        put:
+            tags:
+                - TicketService
+            operationId: TicketService_UpdateTicket
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateTicketRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateTicketResponse'
+        delete:
+            tags:
+                - TicketService
+            operationId: TicketService_DeleteTicket
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /v1/tickets/{id}/assign:
+        post:
+            tags:
+                - TicketService
+            description: AssignTicket sets (or clears, with assignee_id=0) the ticket's assignee.
+            operationId: TicketService_AssignTicket
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AssignTicketRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AssignTicketResponse'
+    /v1/tickets/{id}/status:
+        post:
+            tags:
+                - TicketService
+            description: UpdateTicketStatus transitions the ticket's lifecycle status.
+            operationId: TicketService_UpdateTicketStatus
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateTicketStatusRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateTicketStatusResponse'
+    /v1/tickets/{ticketId}/comments:
+        get:
+            tags:
+                - TicketCommentService
+            operationId: TicketCommentService_ListComments
+            parameters:
+                - name: ticketId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListCommentsResponse'
+        post:
+            tags:
+                - TicketCommentService
+            operationId: TicketCommentService_CreateComment
+            parameters:
+                - name: ticketId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateCommentRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateCommentResponse'
+components:
+    schemas:
+        AssignTicketRequest:
+            required:
+                - id
+            type: object
+            properties:
+                id:
+                    type: string
+                assigneeId:
+                    type: integer
+                    format: uint32
+        AssignTicketResponse:
+            type: object
+            properties:
+                ticket:
+                    $ref: '#/components/schemas/Ticket'
+        AssignableUser:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    format: uint32
+                username:
+                    type: string
+                name:
+                    type: string
+                email:
+                    type: string
+            description: |-
+                AssignableUser is a thin projection of an admin-service user, used to
+                 populate the assignee dropdown in the ticket UI.
+        CreateCommentRequest:
+            required:
+                - ticketId
+                - body
+            type: object
+            properties:
+                ticketId:
+                    type: string
+                body:
+                    type: string
+                internal:
+                    type: boolean
+        CreateCommentResponse:
+            type: object
+            properties:
+                comment:
+                    $ref: '#/components/schemas/TicketComment'
+        CreateTicketRequest:
+            required:
+                - subject
+            type: object
+            properties:
+                subject:
+                    type: string
+                description:
+                    type: string
+                priority:
+                    enum:
+                        - TICKET_PRIORITY_UNSPECIFIED
+                        - TICKET_PRIORITY_LOW
+                        - TICKET_PRIORITY_NORMAL
+                        - TICKET_PRIORITY_HIGH
+                        - TICKET_PRIORITY_URGENT
+                    type: string
+                    format: enum
+                requesterEmail:
+                    type: string
+                requesterName:
+                    type: string
+                assigneeId:
+                    type: integer
+                    format: uint32
+        CreateTicketResponse:
+            type: object
+            properties:
+                ticket:
+                    $ref: '#/components/schemas/Ticket'
+        GetTicketResponse:
+            type: object
+            properties:
+                ticket:
+                    $ref: '#/components/schemas/Ticket'
+        ListAssignableUsersResponse:
+            type: object
+            properties:
+                users:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AssignableUser'
+        ListCommentsResponse:
+            type: object
+            properties:
+                comments:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TicketComment'
+                total:
+                    type: integer
+                    format: int32
+        ListTicketsResponse:
+            type: object
+            properties:
+                tickets:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Ticket'
+                total:
+                    type: integer
+                    format: int32
+        Ticket:
+            type: object
+            properties:
+                id:
+                    type: string
+                tenantId:
+                    type: integer
+                    format: uint32
+                externalId:
+                    type: string
+                    description: |-
+                        external_id dedupes inbound emails (the RFC822 Message-Id or the
+                         X-Iris-Message-Id header). Unique per tenant when present.
+                subject:
+                    type: string
+                description:
+                    type: string
+                status:
+                    enum:
+                        - TICKET_STATUS_UNSPECIFIED
+                        - TICKET_STATUS_OPEN
+                        - TICKET_STATUS_IN_PROGRESS
+                        - TICKET_STATUS_PENDING
+                        - TICKET_STATUS_RESOLVED
+                        - TICKET_STATUS_CLOSED
+                    type: string
+                    format: enum
+                priority:
+                    enum:
+                        - TICKET_PRIORITY_UNSPECIFIED
+                        - TICKET_PRIORITY_LOW
+                        - TICKET_PRIORITY_NORMAL
+                        - TICKET_PRIORITY_HIGH
+                        - TICKET_PRIORITY_URGENT
+                    type: string
+                    format: enum
+                source:
+                    type: string
+                    description: source identifies where the ticket came from ("iris", "manual").
+                requesterEmail:
+                    type: string
+                requesterName:
+                    type: string
+                recipient:
+                    type: string
+                    description: |-
+                        recipient is the support address the mail was delivered to
+                         (X-Iris-Recipient), useful for routing/queues.
+                assigneeId:
+                    type: integer
+                    description: assignee_id is the internal user this ticket is assigned to (0 = unassigned).
+                    format: uint32
+                assigneeName:
+                    type: string
+                    description: assignee_name is denormalized for display (resolved from admin-service).
+                commentCount:
+                    type: integer
+                    format: int32
+                createBy:
+                    type: integer
+                    format: uint32
+                createTime:
+                    type: string
+                    format: date-time
+                updateTime:
+                    type: string
+                    format: date-time
+            description: |-
+                Ticket is a support request, typically created from an inbound email
+                 forwarded by iris/KumoMTA, or created manually by an agent.
+        TicketComment:
+            type: object
+            properties:
+                id:
+                    type: string
+                tenantId:
+                    type: integer
+                    format: uint32
+                ticketId:
+                    type: string
+                body:
+                    type: string
+                internal:
+                    type: boolean
+                    description: internal notes are visible only to agents, not the requester.
+                authorId:
+                    type: integer
+                    description: author_id is the internal user who wrote the comment (0 if external).
+                    format: uint32
+                authorName:
+                    type: string
+                authorEmail:
+                    type: string
+                    description: author_email is set when the comment came from an external requester reply.
+                createTime:
+                    type: string
+                    format: date-time
+            description: TicketComment is a reply or internal note on a ticket.
+        UpdateTicketRequest:
+            required:
+                - id
+            type: object
+            properties:
+                id:
+                    type: string
+                subject:
+                    type: string
+                description:
+                    type: string
+                priority:
+                    enum:
+                        - TICKET_PRIORITY_UNSPECIFIED
+                        - TICKET_PRIORITY_LOW
+                        - TICKET_PRIORITY_NORMAL
+                        - TICKET_PRIORITY_HIGH
+                        - TICKET_PRIORITY_URGENT
+                    type: string
+                    format: enum
+        UpdateTicketResponse:
+            type: object
+            properties:
+                ticket:
+                    $ref: '#/components/schemas/Ticket'
+        UpdateTicketStatusRequest:
+            required:
+                - id
+                - status
+            type: object
+            properties:
+                id:
+                    type: string
+                status:
+                    enum:
+                        - TICKET_STATUS_UNSPECIFIED
+                        - TICKET_STATUS_OPEN
+                        - TICKET_STATUS_IN_PROGRESS
+                        - TICKET_STATUS_PENDING
+                        - TICKET_STATUS_RESOLVED
+                        - TICKET_STATUS_CLOSED
+                    type: string
+                    format: enum
+        UpdateTicketStatusResponse:
+            type: object
+            properties:
+                ticket:
+                    $ref: '#/components/schemas/Ticket'
+tags:
+    - name: TicketCommentService
+    - name: TicketService
+    - name: TicketUserService

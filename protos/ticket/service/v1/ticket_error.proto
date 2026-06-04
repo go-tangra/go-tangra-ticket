@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package ticket.service.v1;
+
+import "errors/errors.proto";
+
+enum TicketErrorReason {
+  option (errors.default_code) = 500;
+
+  // 400 - Bad Request
+  BAD_REQUEST = 0 [(errors.code) = 400];
+  INVALID_STATUS = 1 [(errors.code) = 400];
+  INVALID_ASSIGNEE = 2 [(errors.code) = 400];
+
+  // 401 / 403
+  UNAUTHORIZED = 100 [(errors.code) = 401];
+  FORBIDDEN = 300 [(errors.code) = 403];
+  ACCESS_DENIED = 301 [(errors.code) = 403];
+
+  // 404 - Not Found
+  NOT_FOUND = 400 [(errors.code) = 404];
+  TICKET_NOT_FOUND = 401 [(errors.code) = 404];
+  COMMENT_NOT_FOUND = 402 [(errors.code) = 404];
+
+  // 409 - Conflict
+  TICKET_ALREADY_EXISTS = 900 [(errors.code) = 409];
+
+  // 500 - Internal Server Error
+  INTERNAL_SERVER_ERROR = 2000 [(errors.code) = 500];
+  DATABASE_ERROR = 2003 [(errors.code) = 500];
+
+  // 503 - Service Unavailable
+  SERVICE_UNAVAILABLE = 2300 [(errors.code) = 503];
+  ADMIN_UNAVAILABLE = 2301 [(errors.code) = 503];
+}

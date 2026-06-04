@@ -1,0 +1,18 @@
+data:
+  database:
+    driver: "postgresql"
+    source: "postgres://postgres:admin123@localhost:5432/ticket?sslmode=disable"
+    migrate: true
+    max_idle: 10
+    max_open: 100
+    max_lifetime: 3600s
+    debug: false
+
+  redis:
+    network: "tcp"
+    addr: "localhost:6379"
+    password: ""
+    db: 0
+    dial_timeout: 5s
+    read_timeout: 3s
+    write_timeout: 3s

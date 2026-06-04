@@ -1,0 +1,68 @@
+module:
+  id: ticket
+  name: Ticket
+  description: Support ticket system fed by inbound email (iris/KumoMTA), with assignment and status lifecycle.
+
+menus:
+  - id: ticket
+    parent_id: null
+    type: CATALOG
+    name: Tickets
+    path: /ticket
+    icon: lucide:ticket
+    order: 70
+    authority:
+      - platform:admin
+      - tenant:manager
+
+  - id: ticket-list
+    parent_id: ticket
+    type: MENU
+    name: Tickets
+    path: tickets
+    component: app/ticket/tickets/index.vue
+    icon: lucide:list
+    order: 1
+    authority:
+      - platform:admin
+      - tenant:manager
+
+permission_groups:
+  - name: Ticket
+    module: ticket
+    description: Ticket Module Permissions
+    permissions:
+      - name: View Tickets
+        code: ticket.ticket.view
+        description: View tickets and comments
+      - name: Manage Tickets
+        code: ticket.ticket.manage
+        description: Create, update, assign and change ticket status
+      - name: Delete Tickets
+        code: ticket.ticket.delete
+        description: Delete tickets and comments
+
+roles:
+  - name: Ticket Administrator
+    code: ticket.admin
+    description: Full access to the Ticket module
+    is_system: true
+    permissions:
+      - ticket.ticket.view
+      - ticket.ticket.manage
+      - ticket.ticket.delete
+
+  - name: Ticket Agent
+    code: ticket.agent
+    description: Work tickets (view, assign, comment, change status) without delete
+    is_system: true
+    permissions:
+      - ticket.ticket.view
+      - ticket.ticket.manage
+
+  - name: Ticket Viewer
+    code: ticket.viewer
+    description: Read-only access to tickets
+    is_system: true
+    permissions:
+      - ticket.ticket.view

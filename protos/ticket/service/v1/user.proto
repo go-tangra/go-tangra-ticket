@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package ticket.service.v1;
+
+import "google/api/annotations.proto";
+
+// AssignableUser is a thin projection of an admin-service user, used to
+// populate the assignee dropdown in the ticket UI.
+message AssignableUser {
+  uint32 id = 1 [json_name = "id"];
+  string username = 2 [json_name = "username"];
+  string name = 3 [json_name = "name"];
+  string email = 4 [json_name = "email"];
+}
+
+service TicketUserService {
+  // ListAssignableUsers returns the users (in the caller's tenant) a ticket
+  // can be assigned to. Proxied to admin-service.
+  rpc ListAssignableUsers(ListAssignableUsersRequest) returns (ListAssignableUsersResponse) {
+    option (google.api.http) = {get: "/v1/assignable-users"};
+  }
+}
+
+message ListAssignableUsersRequest {}
+
+message ListAssignableUsersResponse {
+  repeated AssignableUser users = 1 [json_name = "users"];
+}

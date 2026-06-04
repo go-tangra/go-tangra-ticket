@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package ticket.service.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// TicketComment is a reply or internal note on a ticket.
+message TicketComment {
+  string id = 1 [json_name = "id"];
+  uint32 tenant_id = 2 [json_name = "tenantId"];
+  string ticket_id = 3 [json_name = "ticketId"];
+  string body = 4 [json_name = "body"];
+  // internal notes are visible only to agents, not the requester.
+  bool internal = 5 [json_name = "internal"];
+  // author_id is the internal user who wrote the comment (0 if external).
+  uint32 author_id = 6 [json_name = "authorId"];
+  string author_name = 7 [json_name = "authorName"];
+  // author_email is set when the comment came from an external requester reply.
+  string author_email = 8 [json_name = "authorEmail"];
+  google.protobuf.Timestamp create_time = 9 [json_name = "createTime"];
+}
+
+service TicketCommentService {
+  rpc CreateComment(CreateCommentRequest) returns (CreateCommentResponse) {
+    option (google.api.http) = {
+      post: "/v1/tickets/{ticket_id}/comments"
+      body: "*"
+    };
+  }
+
+  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse) {
+    option (google.api.http) = {get: "/v1/tickets/{ticket_id}/comments"};
+  }
+
+  rpc DeleteComment(DeleteCommentRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/comments/{id}"};
+  }
+}
+
+message CreateCommentRequest {
+  string ticket_id = 1 [json_name = "ticketId", (google.api.field_behavior) = REQUIRED];
+  string body = 2 [json_name = "body", (google.api.field_behavior) = REQUIRED, (buf.validate.field).string.min_len = 1];
+  bool internal = 3 [json_name = "internal"];
+}
+message CreateCommentResponse {
+  TicketComment comment = 1 [json_name = "comment"];
+}
+
+message ListCommentsRequest {
+  string ticket_id = 1 [json_name = "ticketId", (google.api.field_behavior) = REQUIRED];
+}
+message ListCommentsResponse {
+  repeated TicketComment comments = 1 [json_name = "comments"];
+  int32 total = 2 [json_name = "total"];
+}
+
+message DeleteCommentRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+}

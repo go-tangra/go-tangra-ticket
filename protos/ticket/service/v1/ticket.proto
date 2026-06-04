@@ -1,0 +1,163 @@
+syntax = "proto3";
+
+package ticket.service.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// Lifecycle states a ticket moves through.
+enum TicketStatus {
+  TICKET_STATUS_UNSPECIFIED = 0;
+  TICKET_STATUS_OPEN = 1;
+  TICKET_STATUS_IN_PROGRESS = 2;
+  TICKET_STATUS_PENDING = 3;
+  TICKET_STATUS_RESOLVED = 4;
+  TICKET_STATUS_CLOSED = 5;
+}
+
+enum TicketPriority {
+  TICKET_PRIORITY_UNSPECIFIED = 0;
+  TICKET_PRIORITY_LOW = 1;
+  TICKET_PRIORITY_NORMAL = 2;
+  TICKET_PRIORITY_HIGH = 3;
+  TICKET_PRIORITY_URGENT = 4;
+}
+
+// Ticket is a support request, typically created from an inbound email
+// forwarded by iris/KumoMTA, or created manually by an agent.
+message Ticket {
+  string id = 1 [json_name = "id"];
+  uint32 tenant_id = 2 [json_name = "tenantId"];
+  // external_id dedupes inbound emails (the RFC822 Message-Id or the
+  // X-Iris-Message-Id header). Unique per tenant when present.
+  string external_id = 3 [json_name = "externalId"];
+  string subject = 4 [json_name = "subject"];
+  string description = 5 [json_name = "description"];
+  TicketStatus status = 6 [json_name = "status"];
+  TicketPriority priority = 7 [json_name = "priority"];
+  // source identifies where the ticket came from ("iris", "manual").
+  string source = 8 [json_name = "source"];
+  string requester_email = 9 [json_name = "requesterEmail"];
+  string requester_name = 10 [json_name = "requesterName"];
+  // recipient is the support address the mail was delivered to
+  // (X-Iris-Recipient), useful for routing/queues.
+  string recipient = 11 [json_name = "recipient"];
+  // assignee_id is the internal user this ticket is assigned to (0 = unassigned).
+  uint32 assignee_id = 12 [json_name = "assigneeId"];
+  // assignee_name is denormalized for display (resolved from admin-service).
+  string assignee_name = 13 [json_name = "assigneeName"];
+  int32 comment_count = 14 [json_name = "commentCount"];
+  uint32 create_by = 15 [json_name = "createBy"];
+  google.protobuf.Timestamp create_time = 16 [json_name = "createTime"];
+  google.protobuf.Timestamp update_time = 17 [json_name = "updateTime"];
+}
+
+service TicketService {
+  rpc CreateTicket(CreateTicketRequest) returns (CreateTicketResponse) {
+    option (google.api.http) = {
+      post: "/v1/tickets"
+      body: "*"
+    };
+  }
+
+  rpc GetTicket(GetTicketRequest) returns (GetTicketResponse) {
+    option (google.api.http) = {get: "/v1/tickets/{id}"};
+  }
+
+  rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse) {
+    option (google.api.http) = {get: "/v1/tickets"};
+  }
+
+  rpc UpdateTicket(UpdateTicketRequest) returns (UpdateTicketResponse) {
+    option (google.api.http) = {
+      put: "/v1/tickets/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteTicket(DeleteTicketRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/tickets/{id}"};
+  }
+
+  // AssignTicket sets (or clears, with assignee_id=0) the ticket's assignee.
+  rpc AssignTicket(AssignTicketRequest) returns (AssignTicketResponse) {
+    option (google.api.http) = {
+      post: "/v1/tickets/{id}/assign"
+      body: "*"
+    };
+  }
+
+  // UpdateTicketStatus transitions the ticket's lifecycle status.
+  rpc UpdateTicketStatus(UpdateTicketStatusRequest) returns (UpdateTicketStatusResponse) {
+    option (google.api.http) = {
+      post: "/v1/tickets/{id}/status"
+      body: "*"
+    };
+  }
+}
+
+message CreateTicketRequest {
+  string subject = 1 [json_name = "subject", (google.api.field_behavior) = REQUIRED, (buf.validate.field).string.min_len = 1];
+  string description = 2 [json_name = "description"];
+  TicketPriority priority = 3 [json_name = "priority"];
+  string requester_email = 4 [json_name = "requesterEmail"];
+  string requester_name = 5 [json_name = "requesterName"];
+  uint32 assignee_id = 6 [json_name = "assigneeId"];
+}
+message CreateTicketResponse {
+  Ticket ticket = 1 [json_name = "ticket"];
+}
+
+message GetTicketRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+}
+message GetTicketResponse {
+  Ticket ticket = 1 [json_name = "ticket"];
+}
+
+message ListTicketsRequest {
+  optional int32 page = 1 [json_name = "page"];
+  optional int32 page_size = 2 [json_name = "pageSize"];
+  optional TicketStatus status = 3 [json_name = "status"];
+  optional TicketPriority priority = 4 [json_name = "priority"];
+  // assignee_id filter: omit for all; -1 (4294967295) reserved for "unassigned".
+  optional uint32 assignee_id = 5 [json_name = "assigneeId"];
+  optional string query = 6 [json_name = "query"];
+}
+message ListTicketsResponse {
+  repeated Ticket tickets = 1 [json_name = "tickets"];
+  int32 total = 2 [json_name = "total"];
+}
+
+message UpdateTicketRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+  optional string subject = 2 [json_name = "subject"];
+  optional string description = 3 [json_name = "description"];
+  optional TicketPriority priority = 4 [json_name = "priority"];
+}
+message UpdateTicketResponse {
+  Ticket ticket = 1 [json_name = "ticket"];
+}
+
+message DeleteTicketRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+}
+
+message AssignTicketRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+  uint32 assignee_id = 2 [json_name = "assigneeId"];
+}
+message AssignTicketResponse {
+  Ticket ticket = 1 [json_name = "ticket"];
+}
+
+message UpdateTicketStatusRequest {
+  string id = 1 [json_name = "id", (google.api.field_behavior) = REQUIRED];
+  TicketStatus status = 2 [json_name = "status", (google.api.field_behavior) = REQUIRED];
+}
+message UpdateTicketStatusResponse {
+  Ticket ticket = 1 [json_name = "ticket"];
+}

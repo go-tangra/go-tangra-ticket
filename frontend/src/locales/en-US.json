@@ -1,0 +1,31 @@
+{
+  "menu": {
+    "ticket": "Tickets",
+    "tickets": "Tickets"
+  },
+  "page": {
+    "ticket": {
+      "title": "Tickets",
+      "subject": "Subject",
+      "status": "Status",
+      "priority": "Priority",
+      "requester": "Requester",
+      "assignee": "Assignee",
+      "source": "Source",
+      "created": "Created",
+      "unassigned": "Unassigned",
+      "detail": "Ticket Detail",
+      "assign": "Assign",
+      "changeStatus": "Change Status",
+      "comments": "Comments",
+      "addComment": "Add Comment",
+      "internalNote": "Internal note",
+      "noComments": "No comments yet",
+      "assignSuccess": "Ticket assigned",
+      "statusSuccess": "Status updated",
+      "commentSuccess": "Comment added",
+      "deleteSuccess": "Ticket deleted",
+      "confirmDelete": "Delete this ticket?"
+    }
+  }
+}
