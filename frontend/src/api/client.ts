@@ -57,6 +57,7 @@ export type {
   TicketTag,
   TicketRule,
   RuleCondition,
+  RuleAction,
   RuleInput,
   AssignableUser,
   ListTicketsRequest,

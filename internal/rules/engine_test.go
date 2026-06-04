@@ -71,6 +71,27 @@ func TestBuildAndEval(t *testing.T) {
 			want:  true,
 		},
 		{
+			name:  "hasAttachments true matches",
+			match: "ALL",
+			conds: []Condition{{Field: "hasAttachments", Operator: "equals", Value: "true"}},
+			want:  false, // base mail has no attachments
+		},
+		{
+			name:  "hasAttachments false matches when none",
+			match: "ALL",
+			conds: []Condition{{Field: "hasAttachments", Operator: "equals", Value: "false"}},
+			want:  true,
+		},
+		{
+			name:  "subject AND hasAttachments",
+			match: "ALL",
+			conds: []Condition{
+				{Field: "subject", Operator: "contains", Value: "server"},
+				{Field: "hasAttachments", Operator: "equals", Value: "false"},
+			},
+			want: true,
+		},
+		{
 			name:  "unknown field is dropped -> no parts -> false",
 			match: "ALL",
 			conds: []Condition{{Field: "bogus", Operator: "contains", Value: "x"}},
@@ -109,6 +130,19 @@ func TestQuoteEscaping(t *testing.T) {
 	}
 	if !ok {
 		t.Fatalf("expected match for quoted value, expr=%q", expr)
+	}
+}
+
+func TestHasAttachmentsEval(t *testing.T) {
+	e := mustEngine(t)
+	expr := BuildExpression("ALL", []Condition{{Field: "hasAttachments", Value: "true"}})
+	ok, err := e.Eval(expr, Email{HasAttachments: true})
+	if err != nil || !ok {
+		t.Fatalf("want match with attachments: ok=%v err=%v expr=%q", ok, err, expr)
+	}
+	ok, err = e.Eval(expr, Email{HasAttachments: false})
+	if err != nil || ok {
+		t.Fatalf("want no match without attachments: ok=%v err=%v", ok, err)
 	}
 }
 

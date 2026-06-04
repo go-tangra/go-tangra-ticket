@@ -183,6 +183,20 @@ func (_c *TicketRuleCreate) SetNillableTagNames(v *string) *TicketRuleCreate {
 	return _c
 }
 
+// SetActions sets the "actions" field.
+func (_c *TicketRuleCreate) SetActions(v string) *TicketRuleCreate {
+	_c.mutation.SetActions(v)
+	return _c
+}
+
+// SetNillableActions sets the "actions" field if the given value is not nil.
+func (_c *TicketRuleCreate) SetNillableActions(v *string) *TicketRuleCreate {
+	if v != nil {
+		_c.SetActions(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TicketRuleCreate) SetID(v string) *TicketRuleCreate {
 	_c.mutation.SetID(v)
@@ -359,6 +373,10 @@ func (_c *TicketRuleCreate) createSpec() (*TicketRule, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TagNames(); ok {
 		_spec.SetField(ticketrule.FieldTagNames, field.TypeString, value)
 		_node.TagNames = value
+	}
+	if value, ok := _c.mutation.Actions(); ok {
+		_spec.SetField(ticketrule.FieldActions, field.TypeString, value)
+		_node.Actions = value
 	}
 	return _node, _spec
 }
@@ -565,6 +583,24 @@ func (u *TicketRuleUpsert) UpdateTagNames() *TicketRuleUpsert {
 // ClearTagNames clears the value of the "tag_names" field.
 func (u *TicketRuleUpsert) ClearTagNames() *TicketRuleUpsert {
 	u.SetNull(ticketrule.FieldTagNames)
+	return u
+}
+
+// SetActions sets the "actions" field.
+func (u *TicketRuleUpsert) SetActions(v string) *TicketRuleUpsert {
+	u.Set(ticketrule.FieldActions, v)
+	return u
+}
+
+// UpdateActions sets the "actions" field to the value that was provided on create.
+func (u *TicketRuleUpsert) UpdateActions() *TicketRuleUpsert {
+	u.SetExcluded(ticketrule.FieldActions)
+	return u
+}
+
+// ClearActions clears the value of the "actions" field.
+func (u *TicketRuleUpsert) ClearActions() *TicketRuleUpsert {
+	u.SetNull(ticketrule.FieldActions)
 	return u
 }
 
@@ -801,6 +837,27 @@ func (u *TicketRuleUpsertOne) UpdateTagNames() *TicketRuleUpsertOne {
 func (u *TicketRuleUpsertOne) ClearTagNames() *TicketRuleUpsertOne {
 	return u.Update(func(s *TicketRuleUpsert) {
 		s.ClearTagNames()
+	})
+}
+
+// SetActions sets the "actions" field.
+func (u *TicketRuleUpsertOne) SetActions(v string) *TicketRuleUpsertOne {
+	return u.Update(func(s *TicketRuleUpsert) {
+		s.SetActions(v)
+	})
+}
+
+// UpdateActions sets the "actions" field to the value that was provided on create.
+func (u *TicketRuleUpsertOne) UpdateActions() *TicketRuleUpsertOne {
+	return u.Update(func(s *TicketRuleUpsert) {
+		s.UpdateActions()
+	})
+}
+
+// ClearActions clears the value of the "actions" field.
+func (u *TicketRuleUpsertOne) ClearActions() *TicketRuleUpsertOne {
+	return u.Update(func(s *TicketRuleUpsert) {
+		s.ClearActions()
 	})
 }
 
@@ -1204,6 +1261,27 @@ func (u *TicketRuleUpsertBulk) UpdateTagNames() *TicketRuleUpsertBulk {
 func (u *TicketRuleUpsertBulk) ClearTagNames() *TicketRuleUpsertBulk {
 	return u.Update(func(s *TicketRuleUpsert) {
 		s.ClearTagNames()
+	})
+}
+
+// SetActions sets the "actions" field.
+func (u *TicketRuleUpsertBulk) SetActions(v string) *TicketRuleUpsertBulk {
+	return u.Update(func(s *TicketRuleUpsert) {
+		s.SetActions(v)
+	})
+}
+
+// UpdateActions sets the "actions" field to the value that was provided on create.
+func (u *TicketRuleUpsertBulk) UpdateActions() *TicketRuleUpsertBulk {
+	return u.Update(func(s *TicketRuleUpsert) {
+		s.UpdateActions()
+	})
+}
+
+// ClearActions clears the value of the "actions" field.
+func (u *TicketRuleUpsertBulk) ClearActions() *TicketRuleUpsertBulk {
+	return u.Update(func(s *TicketRuleUpsert) {
+		s.ClearActions()
 	})
 }
 

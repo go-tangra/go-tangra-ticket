@@ -7,6 +7,23 @@ export const fieldOptions: { value: string; label: string }[] = [
   { value: 'from', label: 'Sender email' },
   { value: 'fromName', label: 'Sender name' },
   { value: 'recipient', label: 'Recipient' },
+  { value: 'hasAttachments', label: 'Has attachments' },
+];
+
+// Boolean fields render a yes/no value instead of operator + text.
+export const booleanFields = new Set(['hasAttachments']);
+
+export const booleanValueOptions: { value: string; label: string }[] = [
+  { value: 'true', label: 'Yes' },
+  { value: 'false', label: 'No' },
+];
+
+// "Then apply" action types.
+export const actionTypeOptions: { value: string; label: string }[] = [
+  { value: 'tag', label: 'Add tags' },
+  { value: 'assign', label: 'Assign to user' },
+  { value: 'status', label: 'Set status' },
+  { value: 'priority', label: 'Set priority' },
 ];
 
 export const operatorOptions: { value: string; label: string }[] = [

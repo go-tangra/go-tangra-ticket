@@ -105,8 +105,31 @@ func (s *RuleService) toRuleData(tenantID uint32, in *ticketpb.RuleInput) (data.
 		}
 	}
 
+	// Build the actions list. New clients send in.Actions; for backward
+	// compatibility a client that only sets tag_kind/tag_names is treated
+	// as a single tag action.
+	actions := make([]rules.Action, 0, len(in.Actions))
+	for _, a := range in.Actions {
+		actions = append(actions, rules.Action{
+			Type:       a.Type,
+			TagKind:    a.TagKind,
+			TagNames:   a.TagNames,
+			AssigneeID: a.AssigneeId,
+			Status:     a.Status,
+			Priority:   a.Priority,
+		})
+	}
+	if len(actions) == 0 && len(in.TagNames) > 0 {
+		actions = append(actions, rules.Action{
+			Type:     "tag",
+			TagKind:  in.TagKind,
+			TagNames: in.TagNames,
+		})
+	}
+
 	condJSON, _ := json.Marshal(conds)
 	tagJSON, _ := json.Marshal(in.TagNames)
+	actionsJSON, _ := json.Marshal(actions)
 	match := in.Match
 	if match == "" {
 		match = "ALL"
@@ -121,5 +144,6 @@ func (s *RuleService) toRuleData(tenantID uint32, in *ticketpb.RuleInput) (data.
 		Expression: in.Expression,
 		TagKind:    in.TagKind,
 		TagNames:   string(tagJSON),
+		Actions:    string(actionsJSON),
 	}, nil
 }

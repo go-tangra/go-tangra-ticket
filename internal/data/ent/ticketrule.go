@@ -38,10 +38,12 @@ type TicketRule struct {
 	Conditions string `json:"conditions,omitempty"`
 	// Optional raw CEL expression (overrides conditions)
 	Expression string `json:"expression,omitempty"`
-	// Kind of tag created/applied: TAG or CATEGORY
+	// Legacy single tag action: kind (TAG or CATEGORY)
 	TagKind string `json:"tag_kind,omitempty"`
-	// JSON: tag names to apply when the rule matches
-	TagNames     string `json:"tag_names,omitempty"`
+	// Legacy single tag action: JSON tag names
+	TagNames string `json:"tag_names,omitempty"`
+	// JSON: [{type,tagKind,tagNames,assigneeId,status,priority}] applied when the rule matches
+	Actions      string `json:"actions,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -54,7 +56,7 @@ func (*TicketRule) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case ticketrule.FieldTenantID, ticketrule.FieldSortOrder:
 			values[i] = new(sql.NullInt64)
-		case ticketrule.FieldID, ticketrule.FieldName, ticketrule.FieldMatch, ticketrule.FieldConditions, ticketrule.FieldExpression, ticketrule.FieldTagKind, ticketrule.FieldTagNames:
+		case ticketrule.FieldID, ticketrule.FieldName, ticketrule.FieldMatch, ticketrule.FieldConditions, ticketrule.FieldExpression, ticketrule.FieldTagKind, ticketrule.FieldTagNames, ticketrule.FieldActions:
 			values[i] = new(sql.NullString)
 		case ticketrule.FieldCreateTime, ticketrule.FieldUpdateTime, ticketrule.FieldDeleteTime:
 			values[i] = new(sql.NullTime)
@@ -155,6 +157,12 @@ func (_m *TicketRule) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.TagNames = value.String
 			}
+		case ticketrule.FieldActions:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field actions", values[i])
+			} else if value.Valid {
+				_m.Actions = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -234,6 +242,9 @@ func (_m *TicketRule) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("tag_names=")
 	builder.WriteString(_m.TagNames)
+	builder.WriteString(", ")
+	builder.WriteString("actions=")
+	builder.WriteString(_m.Actions)
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -13,20 +13,32 @@ import (
 
 // Condition is one row of the rule builder.
 type Condition struct {
-	Field    string `json:"field"`    // subject | body | from | fromName | recipient
+	Field    string `json:"field"`    // subject | body | from | fromName | recipient | hasAttachments
 	Operator string `json:"operator"` // contains | not_contains | equals | not_equals | starts_with | ends_with | matches
 	Value    string `json:"value"`
 }
 
-// Email is the evaluation input.
-type Email struct {
-	Subject   string
-	Body      string
-	From      string
-	FromName  string
-	Recipient string
+// Action is one row of the "Then apply" block.
+type Action struct {
+	Type       string   `json:"type"` // tag | assign | status | priority
+	TagKind    string   `json:"tagKind"`
+	TagNames   []string `json:"tagNames"`
+	AssigneeID uint32   `json:"assigneeId"`
+	Status     string   `json:"status"`
+	Priority   string   `json:"priority"`
 }
 
+// Email is the evaluation input.
+type Email struct {
+	Subject        string
+	Body           string
+	From           string
+	FromName       string
+	Recipient      string
+	HasAttachments bool
+}
+
+// String fields support text operators; hasAttachments is boolean.
 var allowedFields = map[string]bool{
 	"subject": true, "body": true, "from": true, "fromName": true, "recipient": true,
 }
@@ -44,6 +56,7 @@ func NewEngine() (*Engine, error) {
 		cel.Variable("from", cel.StringType),
 		cel.Variable("fromName", cel.StringType),
 		cel.Variable("recipient", cel.StringType),
+		cel.Variable("hasAttachments", cel.BoolType),
 	)
 	if err != nil {
 		return nil, err
@@ -71,6 +84,14 @@ func BuildExpression(match string, conds []Condition) string {
 }
 
 func conditionExpr(c Condition) string {
+	// Boolean field: hasAttachments. Operator is ignored; the value
+	// ("true"/"false", default true) decides the comparison.
+	if c.Field == "hasAttachments" {
+		if strings.EqualFold(strings.TrimSpace(c.Value), "false") {
+			return "hasAttachments == false"
+		}
+		return "hasAttachments == true"
+	}
 	if !allowedFields[c.Field] {
 		return ""
 	}
@@ -128,11 +149,12 @@ func (e *Engine) Eval(expr string, m Email) (bool, error) {
 		return false, err
 	}
 	out, _, err := prg.Eval(map[string]any{
-		"subject":   m.Subject,
-		"body":      m.Body,
-		"from":      m.From,
-		"fromName":  m.FromName,
-		"recipient": m.Recipient,
+		"subject":        m.Subject,
+		"body":           m.Body,
+		"from":           m.From,
+		"fromName":       m.FromName,
+		"recipient":      m.Recipient,
+		"hasAttachments": m.HasAttachments,
 	})
 	if err != nil {
 		return false, err

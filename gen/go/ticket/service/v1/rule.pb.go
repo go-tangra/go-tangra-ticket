@@ -28,9 +28,10 @@ const (
 // RuleCondition is one row of the Cloudflare-style rule builder.
 type RuleCondition struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// field: subject | body | from | fromName | recipient
+	// field: subject | body | from | fromName | recipient | hasAttachments
 	Field string `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
 	// operator: contains | not_contains | equals | not_equals | starts_with | ends_with | matches
+	// (ignored for the boolean field hasAttachments; value is "true"/"false")
 	Operator      string `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator,omitempty"`
 	Value         string `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -88,6 +89,96 @@ func (x *RuleCondition) GetValue() string {
 	return ""
 }
 
+// RuleAction is one row of the "Then apply" block. A rule may have several.
+type RuleAction struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// type: tag | assign | status | priority
+	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	// tag: kind (TAG|CATEGORY) and the names to create/apply.
+	TagKind  string   `protobuf:"bytes,2,opt,name=tag_kind,json=tagKind,proto3" json:"tag_kind,omitempty"`
+	TagNames []string `protobuf:"bytes,3,rep,name=tag_names,json=tagNames,proto3" json:"tag_names,omitempty"`
+	// assign: internal user id to assign the ticket to (0 = unassign).
+	AssigneeId uint32 `protobuf:"varint,4,opt,name=assignee_id,json=assigneeId,proto3" json:"assignee_id,omitempty"`
+	// status: TICKET_STATUS_* enum-name string.
+	Status string `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	// priority: TICKET_PRIORITY_* enum-name string.
+	Priority      string `protobuf:"bytes,6,opt,name=priority,proto3" json:"priority,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RuleAction) Reset() {
+	*x = RuleAction{}
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RuleAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RuleAction) ProtoMessage() {}
+
+func (x *RuleAction) ProtoReflect() protoreflect.Message {
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RuleAction.ProtoReflect.Descriptor instead.
+func (*RuleAction) Descriptor() ([]byte, []int) {
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RuleAction) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *RuleAction) GetTagKind() string {
+	if x != nil {
+		return x.TagKind
+	}
+	return ""
+}
+
+func (x *RuleAction) GetTagNames() []string {
+	if x != nil {
+		return x.TagNames
+	}
+	return nil
+}
+
+func (x *RuleAction) GetAssigneeId() uint32 {
+	if x != nil {
+		return x.AssigneeId
+	}
+	return 0
+}
+
+func (x *RuleAction) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *RuleAction) GetPriority() string {
+	if x != nil {
+		return x.Priority
+	}
+	return ""
+}
+
 // TicketRule auto-applies tags/categories to inbound tickets.
 type TicketRule struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
@@ -100,18 +191,21 @@ type TicketRule struct {
 	Match      string           `protobuf:"bytes,6,opt,name=match,proto3" json:"match,omitempty"`
 	Conditions []*RuleCondition `protobuf:"bytes,7,rep,name=conditions,proto3" json:"conditions,omitempty"`
 	// expression overrides conditions when set (raw CEL).
-	Expression    string                 `protobuf:"bytes,8,opt,name=expression,proto3" json:"expression,omitempty"`
+	Expression string `protobuf:"bytes,8,opt,name=expression,proto3" json:"expression,omitempty"`
+	// tag_kind/tag_names are the legacy single tag action, kept for
+	// backward compatibility; new rules use the actions list.
 	TagKind       string                 `protobuf:"bytes,9,opt,name=tag_kind,json=tagKind,proto3" json:"tag_kind,omitempty"`
 	TagNames      []string               `protobuf:"bytes,10,rep,name=tag_names,json=tagNames,proto3" json:"tag_names,omitempty"`
 	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	Actions       []*RuleAction          `protobuf:"bytes,13,rep,name=actions,proto3" json:"actions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TicketRule) Reset() {
 	*x = TicketRule{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[1]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -123,7 +217,7 @@ func (x *TicketRule) String() string {
 func (*TicketRule) ProtoMessage() {}
 
 func (x *TicketRule) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[1]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -136,7 +230,7 @@ func (x *TicketRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TicketRule.ProtoReflect.Descriptor instead.
 func (*TicketRule) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{1}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *TicketRule) GetId() string {
@@ -223,6 +317,13 @@ func (x *TicketRule) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *TicketRule) GetActions() []*RuleAction {
+	if x != nil {
+		return x.Actions
+	}
+	return nil
+}
+
 type ListRulesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -231,7 +332,7 @@ type ListRulesRequest struct {
 
 func (x *ListRulesRequest) Reset() {
 	*x = ListRulesRequest{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[2]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -243,7 +344,7 @@ func (x *ListRulesRequest) String() string {
 func (*ListRulesRequest) ProtoMessage() {}
 
 func (x *ListRulesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[2]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -256,7 +357,7 @@ func (x *ListRulesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRulesRequest.ProtoReflect.Descriptor instead.
 func (*ListRulesRequest) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{2}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{3}
 }
 
 type ListRulesResponse struct {
@@ -268,7 +369,7 @@ type ListRulesResponse struct {
 
 func (x *ListRulesResponse) Reset() {
 	*x = ListRulesResponse{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[3]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -280,7 +381,7 @@ func (x *ListRulesResponse) String() string {
 func (*ListRulesResponse) ProtoMessage() {}
 
 func (x *ListRulesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[3]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -293,7 +394,7 @@ func (x *ListRulesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRulesResponse.ProtoReflect.Descriptor instead.
 func (*ListRulesResponse) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{3}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListRulesResponse) GetRules() []*TicketRule {
@@ -312,7 +413,7 @@ type GetRuleRequest struct {
 
 func (x *GetRuleRequest) Reset() {
 	*x = GetRuleRequest{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[4]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +425,7 @@ func (x *GetRuleRequest) String() string {
 func (*GetRuleRequest) ProtoMessage() {}
 
 func (x *GetRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[4]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +438,7 @@ func (x *GetRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRuleRequest.ProtoReflect.Descriptor instead.
 func (*GetRuleRequest) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{4}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetRuleRequest) GetId() string {
@@ -356,7 +457,7 @@ type GetRuleResponse struct {
 
 func (x *GetRuleResponse) Reset() {
 	*x = GetRuleResponse{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[5]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -368,7 +469,7 @@ func (x *GetRuleResponse) String() string {
 func (*GetRuleResponse) ProtoMessage() {}
 
 func (x *GetRuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[5]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -381,7 +482,7 @@ func (x *GetRuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRuleResponse.ProtoReflect.Descriptor instead.
 func (*GetRuleResponse) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{5}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetRuleResponse) GetRule() *TicketRule {
@@ -401,13 +502,14 @@ type RuleInput struct {
 	Expression    string                 `protobuf:"bytes,6,opt,name=expression,proto3" json:"expression,omitempty"`
 	TagKind       string                 `protobuf:"bytes,7,opt,name=tag_kind,json=tagKind,proto3" json:"tag_kind,omitempty"`
 	TagNames      []string               `protobuf:"bytes,8,rep,name=tag_names,json=tagNames,proto3" json:"tag_names,omitempty"`
+	Actions       []*RuleAction          `protobuf:"bytes,9,rep,name=actions,proto3" json:"actions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RuleInput) Reset() {
 	*x = RuleInput{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[6]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -419,7 +521,7 @@ func (x *RuleInput) String() string {
 func (*RuleInput) ProtoMessage() {}
 
 func (x *RuleInput) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[6]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -432,7 +534,7 @@ func (x *RuleInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuleInput.ProtoReflect.Descriptor instead.
 func (*RuleInput) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{6}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RuleInput) GetName() string {
@@ -491,6 +593,13 @@ func (x *RuleInput) GetTagNames() []string {
 	return nil
 }
 
+func (x *RuleInput) GetActions() []*RuleAction {
+	if x != nil {
+		return x.Actions
+	}
+	return nil
+}
+
 type CreateRuleRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Rule          *RuleInput             `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
@@ -500,7 +609,7 @@ type CreateRuleRequest struct {
 
 func (x *CreateRuleRequest) Reset() {
 	*x = CreateRuleRequest{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[7]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -512,7 +621,7 @@ func (x *CreateRuleRequest) String() string {
 func (*CreateRuleRequest) ProtoMessage() {}
 
 func (x *CreateRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[7]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -525,7 +634,7 @@ func (x *CreateRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRuleRequest.ProtoReflect.Descriptor instead.
 func (*CreateRuleRequest) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{7}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateRuleRequest) GetRule() *RuleInput {
@@ -544,7 +653,7 @@ type CreateRuleResponse struct {
 
 func (x *CreateRuleResponse) Reset() {
 	*x = CreateRuleResponse{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[8]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -556,7 +665,7 @@ func (x *CreateRuleResponse) String() string {
 func (*CreateRuleResponse) ProtoMessage() {}
 
 func (x *CreateRuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[8]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -569,7 +678,7 @@ func (x *CreateRuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRuleResponse.ProtoReflect.Descriptor instead.
 func (*CreateRuleResponse) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{8}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateRuleResponse) GetRule() *TicketRule {
@@ -589,7 +698,7 @@ type UpdateRuleRequest struct {
 
 func (x *UpdateRuleRequest) Reset() {
 	*x = UpdateRuleRequest{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[9]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -601,7 +710,7 @@ func (x *UpdateRuleRequest) String() string {
 func (*UpdateRuleRequest) ProtoMessage() {}
 
 func (x *UpdateRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[9]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -614,7 +723,7 @@ func (x *UpdateRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRuleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRuleRequest) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{9}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateRuleRequest) GetId() string {
@@ -640,7 +749,7 @@ type UpdateRuleResponse struct {
 
 func (x *UpdateRuleResponse) Reset() {
 	*x = UpdateRuleResponse{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[10]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -652,7 +761,7 @@ func (x *UpdateRuleResponse) String() string {
 func (*UpdateRuleResponse) ProtoMessage() {}
 
 func (x *UpdateRuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[10]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -665,7 +774,7 @@ func (x *UpdateRuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRuleResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRuleResponse) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{10}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateRuleResponse) GetRule() *TicketRule {
@@ -684,7 +793,7 @@ type DeleteRuleRequest struct {
 
 func (x *DeleteRuleRequest) Reset() {
 	*x = DeleteRuleRequest{}
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[11]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -696,7 +805,7 @@ func (x *DeleteRuleRequest) String() string {
 func (*DeleteRuleRequest) ProtoMessage() {}
 
 func (x *DeleteRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ticket_service_v1_rule_proto_msgTypes[11]
+	mi := &file_ticket_service_v1_rule_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -709,7 +818,7 @@ func (x *DeleteRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRuleRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRuleRequest) Descriptor() ([]byte, []int) {
-	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{11}
+	return file_ticket_service_v1_rule_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteRuleRequest) GetId() string {
@@ -727,7 +836,16 @@ const file_ticket_service_v1_rule_proto_rawDesc = "" +
 	"\rRuleCondition\x12\x14\n" +
 	"\x05field\x18\x01 \x01(\tR\x05field\x12\x1a\n" +
 	"\boperator\x18\x02 \x01(\tR\boperator\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\tR\x05value\"\xb0\x03\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\"\xad\x01\n" +
+	"\n" +
+	"RuleAction\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x19\n" +
+	"\btag_kind\x18\x02 \x01(\tR\atagKind\x12\x1b\n" +
+	"\ttag_names\x18\x03 \x03(\tR\btagNames\x12\x1f\n" +
+	"\vassignee_id\x18\x04 \x01(\rR\n" +
+	"assigneeId\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1a\n" +
+	"\bpriority\x18\x06 \x01(\tR\bpriority\"\xe9\x03\n" +
 	"\n" +
 	"TicketRule\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -749,14 +867,15 @@ const file_ticket_service_v1_rule_proto_rawDesc = "" +
 	"\vcreate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\x12\n" +
+	"updateTime\x127\n" +
+	"\aactions\x18\r \x03(\v2\x1d.ticket.service.v1.RuleActionR\aactions\"\x12\n" +
 	"\x10ListRulesRequest\"H\n" +
 	"\x11ListRulesResponse\x123\n" +
 	"\x05rules\x18\x01 \x03(\v2\x1d.ticket.service.v1.TicketRuleR\x05rules\"%\n" +
 	"\x0eGetRuleRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"D\n" +
 	"\x0fGetRuleResponse\x121\n" +
-	"\x04rule\x18\x01 \x01(\v2\x1d.ticket.service.v1.TicketRuleR\x04rule\"\x88\x02\n" +
+	"\x04rule\x18\x01 \x01(\v2\x1d.ticket.service.v1.TicketRuleR\x04rule\"\xc1\x02\n" +
 	"\tRuleInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aenabled\x18\x02 \x01(\bR\aenabled\x12\x1d\n" +
@@ -770,7 +889,8 @@ const file_ticket_service_v1_rule_proto_rawDesc = "" +
 	"expression\x18\x06 \x01(\tR\n" +
 	"expression\x12\x19\n" +
 	"\btag_kind\x18\a \x01(\tR\atagKind\x12\x1b\n" +
-	"\ttag_names\x18\b \x03(\tR\btagNames\"E\n" +
+	"\ttag_names\x18\b \x03(\tR\btagNames\x127\n" +
+	"\aactions\x18\t \x03(\v2\x1d.ticket.service.v1.RuleActionR\aactions\"E\n" +
 	"\x11CreateRuleRequest\x120\n" +
 	"\x04rule\x18\x01 \x01(\v2\x1c.ticket.service.v1.RuleInputR\x04rule\"G\n" +
 	"\x12CreateRuleResponse\x121\n" +
@@ -805,49 +925,52 @@ func file_ticket_service_v1_rule_proto_rawDescGZIP() []byte {
 	return file_ticket_service_v1_rule_proto_rawDescData
 }
 
-var file_ticket_service_v1_rule_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_ticket_service_v1_rule_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_ticket_service_v1_rule_proto_goTypes = []any{
 	(*RuleCondition)(nil),         // 0: ticket.service.v1.RuleCondition
-	(*TicketRule)(nil),            // 1: ticket.service.v1.TicketRule
-	(*ListRulesRequest)(nil),      // 2: ticket.service.v1.ListRulesRequest
-	(*ListRulesResponse)(nil),     // 3: ticket.service.v1.ListRulesResponse
-	(*GetRuleRequest)(nil),        // 4: ticket.service.v1.GetRuleRequest
-	(*GetRuleResponse)(nil),       // 5: ticket.service.v1.GetRuleResponse
-	(*RuleInput)(nil),             // 6: ticket.service.v1.RuleInput
-	(*CreateRuleRequest)(nil),     // 7: ticket.service.v1.CreateRuleRequest
-	(*CreateRuleResponse)(nil),    // 8: ticket.service.v1.CreateRuleResponse
-	(*UpdateRuleRequest)(nil),     // 9: ticket.service.v1.UpdateRuleRequest
-	(*UpdateRuleResponse)(nil),    // 10: ticket.service.v1.UpdateRuleResponse
-	(*DeleteRuleRequest)(nil),     // 11: ticket.service.v1.DeleteRuleRequest
-	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 13: google.protobuf.Empty
+	(*RuleAction)(nil),            // 1: ticket.service.v1.RuleAction
+	(*TicketRule)(nil),            // 2: ticket.service.v1.TicketRule
+	(*ListRulesRequest)(nil),      // 3: ticket.service.v1.ListRulesRequest
+	(*ListRulesResponse)(nil),     // 4: ticket.service.v1.ListRulesResponse
+	(*GetRuleRequest)(nil),        // 5: ticket.service.v1.GetRuleRequest
+	(*GetRuleResponse)(nil),       // 6: ticket.service.v1.GetRuleResponse
+	(*RuleInput)(nil),             // 7: ticket.service.v1.RuleInput
+	(*CreateRuleRequest)(nil),     // 8: ticket.service.v1.CreateRuleRequest
+	(*CreateRuleResponse)(nil),    // 9: ticket.service.v1.CreateRuleResponse
+	(*UpdateRuleRequest)(nil),     // 10: ticket.service.v1.UpdateRuleRequest
+	(*UpdateRuleResponse)(nil),    // 11: ticket.service.v1.UpdateRuleResponse
+	(*DeleteRuleRequest)(nil),     // 12: ticket.service.v1.DeleteRuleRequest
+	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 14: google.protobuf.Empty
 }
 var file_ticket_service_v1_rule_proto_depIdxs = []int32{
 	0,  // 0: ticket.service.v1.TicketRule.conditions:type_name -> ticket.service.v1.RuleCondition
-	12, // 1: ticket.service.v1.TicketRule.create_time:type_name -> google.protobuf.Timestamp
-	12, // 2: ticket.service.v1.TicketRule.update_time:type_name -> google.protobuf.Timestamp
-	1,  // 3: ticket.service.v1.ListRulesResponse.rules:type_name -> ticket.service.v1.TicketRule
-	1,  // 4: ticket.service.v1.GetRuleResponse.rule:type_name -> ticket.service.v1.TicketRule
-	0,  // 5: ticket.service.v1.RuleInput.conditions:type_name -> ticket.service.v1.RuleCondition
-	6,  // 6: ticket.service.v1.CreateRuleRequest.rule:type_name -> ticket.service.v1.RuleInput
-	1,  // 7: ticket.service.v1.CreateRuleResponse.rule:type_name -> ticket.service.v1.TicketRule
-	6,  // 8: ticket.service.v1.UpdateRuleRequest.rule:type_name -> ticket.service.v1.RuleInput
-	1,  // 9: ticket.service.v1.UpdateRuleResponse.rule:type_name -> ticket.service.v1.TicketRule
-	2,  // 10: ticket.service.v1.TicketRuleService.ListRules:input_type -> ticket.service.v1.ListRulesRequest
-	4,  // 11: ticket.service.v1.TicketRuleService.GetRule:input_type -> ticket.service.v1.GetRuleRequest
-	7,  // 12: ticket.service.v1.TicketRuleService.CreateRule:input_type -> ticket.service.v1.CreateRuleRequest
-	9,  // 13: ticket.service.v1.TicketRuleService.UpdateRule:input_type -> ticket.service.v1.UpdateRuleRequest
-	11, // 14: ticket.service.v1.TicketRuleService.DeleteRule:input_type -> ticket.service.v1.DeleteRuleRequest
-	3,  // 15: ticket.service.v1.TicketRuleService.ListRules:output_type -> ticket.service.v1.ListRulesResponse
-	5,  // 16: ticket.service.v1.TicketRuleService.GetRule:output_type -> ticket.service.v1.GetRuleResponse
-	8,  // 17: ticket.service.v1.TicketRuleService.CreateRule:output_type -> ticket.service.v1.CreateRuleResponse
-	10, // 18: ticket.service.v1.TicketRuleService.UpdateRule:output_type -> ticket.service.v1.UpdateRuleResponse
-	13, // 19: ticket.service.v1.TicketRuleService.DeleteRule:output_type -> google.protobuf.Empty
-	15, // [15:20] is the sub-list for method output_type
-	10, // [10:15] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	13, // 1: ticket.service.v1.TicketRule.create_time:type_name -> google.protobuf.Timestamp
+	13, // 2: ticket.service.v1.TicketRule.update_time:type_name -> google.protobuf.Timestamp
+	1,  // 3: ticket.service.v1.TicketRule.actions:type_name -> ticket.service.v1.RuleAction
+	2,  // 4: ticket.service.v1.ListRulesResponse.rules:type_name -> ticket.service.v1.TicketRule
+	2,  // 5: ticket.service.v1.GetRuleResponse.rule:type_name -> ticket.service.v1.TicketRule
+	0,  // 6: ticket.service.v1.RuleInput.conditions:type_name -> ticket.service.v1.RuleCondition
+	1,  // 7: ticket.service.v1.RuleInput.actions:type_name -> ticket.service.v1.RuleAction
+	7,  // 8: ticket.service.v1.CreateRuleRequest.rule:type_name -> ticket.service.v1.RuleInput
+	2,  // 9: ticket.service.v1.CreateRuleResponse.rule:type_name -> ticket.service.v1.TicketRule
+	7,  // 10: ticket.service.v1.UpdateRuleRequest.rule:type_name -> ticket.service.v1.RuleInput
+	2,  // 11: ticket.service.v1.UpdateRuleResponse.rule:type_name -> ticket.service.v1.TicketRule
+	3,  // 12: ticket.service.v1.TicketRuleService.ListRules:input_type -> ticket.service.v1.ListRulesRequest
+	5,  // 13: ticket.service.v1.TicketRuleService.GetRule:input_type -> ticket.service.v1.GetRuleRequest
+	8,  // 14: ticket.service.v1.TicketRuleService.CreateRule:input_type -> ticket.service.v1.CreateRuleRequest
+	10, // 15: ticket.service.v1.TicketRuleService.UpdateRule:input_type -> ticket.service.v1.UpdateRuleRequest
+	12, // 16: ticket.service.v1.TicketRuleService.DeleteRule:input_type -> ticket.service.v1.DeleteRuleRequest
+	4,  // 17: ticket.service.v1.TicketRuleService.ListRules:output_type -> ticket.service.v1.ListRulesResponse
+	6,  // 18: ticket.service.v1.TicketRuleService.GetRule:output_type -> ticket.service.v1.GetRuleResponse
+	9,  // 19: ticket.service.v1.TicketRuleService.CreateRule:output_type -> ticket.service.v1.CreateRuleResponse
+	11, // 20: ticket.service.v1.TicketRuleService.UpdateRule:output_type -> ticket.service.v1.UpdateRuleResponse
+	14, // 21: ticket.service.v1.TicketRuleService.DeleteRule:output_type -> google.protobuf.Empty
+	17, // [17:22] is the sub-list for method output_type
+	12, // [12:17] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_ticket_service_v1_rule_proto_init() }
@@ -861,7 +984,7 @@ func file_ticket_service_v1_rule_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ticket_service_v1_rule_proto_rawDesc), len(file_ticket_service_v1_rule_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

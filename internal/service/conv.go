@@ -113,6 +113,28 @@ func ruleToProto(e *ent.TicketRule) *ticketpb.TicketRule {
 			Field: c.Field, Operator: c.Operator, Value: c.Value,
 		})
 	}
+
+	var actions []rules.Action
+	if e.Actions != "" {
+		_ = json.Unmarshal([]byte(e.Actions), &actions)
+	}
+	// Backward compat: a rule stored with only legacy tag fields exposes a
+	// single synthesized tag action.
+	if len(actions) == 0 {
+		if names := jsonStrings(e.TagNames); len(names) > 0 {
+			actions = append(actions, rules.Action{Type: "tag", TagKind: e.TagKind, TagNames: names})
+		}
+	}
+	for _, a := range actions {
+		r.Actions = append(r.Actions, &ticketpb.RuleAction{
+			Type:       a.Type,
+			TagKind:    a.TagKind,
+			TagNames:   a.TagNames,
+			AssigneeId: a.AssigneeID,
+			Status:     a.Status,
+			Priority:   a.Priority,
+		})
+	}
 	return r
 }
 

@@ -32,8 +32,9 @@ func (TicketRule) Fields() []ent.Field {
 		field.String("match").Default("ALL").Comment("ALL (AND) or ANY (OR)"),
 		field.Text("conditions").Optional().Comment("JSON: [{field,operator,value}]"),
 		field.Text("expression").Optional().Comment("Optional raw CEL expression (overrides conditions)"),
-		field.String("tag_kind").Default("TAG").Comment("Kind of tag created/applied: TAG or CATEGORY"),
-		field.Text("tag_names").Optional().Comment("JSON: tag names to apply when the rule matches"),
+		field.String("tag_kind").Default("TAG").Comment("Legacy single tag action: kind (TAG or CATEGORY)"),
+		field.Text("tag_names").Optional().Comment("Legacy single tag action: JSON tag names"),
+		field.Text("actions").Optional().Comment("JSON: [{type,tagKind,tagNames,assigneeId,status,priority}] applied when the rule matches"),
 	}
 }
 

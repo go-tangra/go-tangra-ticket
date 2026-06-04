@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-tangra/go-tangra-common/viewer"
 	"github.com/go-tangra/go-tangra-ticket/internal/data"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent"
 	"github.com/go-tangra/go-tangra-ticket/internal/metrics"
 	"github.com/go-tangra/go-tangra-ticket/internal/rules"
 )
@@ -148,15 +149,17 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.storeAttachments(ctx, e.ID, pm.attachments)
-	h.applyRules(ctx, e.ID, pm, recipient)
+	h.applyRules(ctx, e.ID, pm, recipient, len(pm.attachments) > 0)
 
 	h.log.Infof("iris webhook: created ticket %s from %q (subject=%q, attachments=%d)", e.ID, fromEmail, subject, len(pm.attachments))
 	writeOK(w)
 }
 
 // applyRules evaluates enabled auto-tagging rules against the parsed email and
-// applies the matching rules' tags (ensure-creating them). Best-effort.
-func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsedMail, recipient string) {
+// applies each matching rule's actions (tag / assign / status / priority).
+// Tags are unioned across all matching rules; for assign/status/priority the
+// first matching rule that specifies one wins. Best-effort.
+func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsedMail, recipient string, hasAttachments bool) {
 	if h.ruleRepo == nil || h.tags == nil || h.engine == nil {
 		return
 	}
@@ -165,14 +168,19 @@ func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsed
 		return
 	}
 	email := rules.Email{
-		Subject:   pm.subject,
-		Body:      pm.text,
-		From:      pm.fromEmail,
-		FromName:  pm.fromName,
-		Recipient: recipient,
+		Subject:        pm.subject,
+		Body:           pm.text,
+		From:           pm.fromEmail,
+		FromName:       pm.fromName,
+		Recipient:      recipient,
+		HasAttachments: hasAttachments,
 	}
+
 	seen := map[string]bool{}
 	var tagIDs []string
+	var assignee *uint32
+	var status, priority string
+
 	for _, r := range rls {
 		expr := r.Expression
 		if expr == "" {
@@ -190,28 +198,76 @@ func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsed
 		if !ok {
 			continue
 		}
-		var names []string
-		if r.TagNames != "" {
-			_ = json.Unmarshal([]byte(r.TagNames), &names)
-		}
-		for _, n := range names {
-			if n == "" {
-				continue
+
+		for _, a := range h.ruleActions(r) {
+			switch a.Type {
+			case "tag", "":
+				for _, n := range a.TagNames {
+					if n == "" {
+						continue
+					}
+					tag, terr := h.tags.EnsureByName(ctx, h.tenantID, a.TagKind, n)
+					if terr != nil || tag == nil || seen[tag.ID] {
+						continue
+					}
+					seen[tag.ID] = true
+					tagIDs = append(tagIDs, tag.ID)
+				}
+			case "assign":
+				if assignee == nil {
+					v := a.AssigneeID
+					assignee = &v
+				}
+			case "status":
+				if status == "" && a.Status != "" {
+					status = a.Status
+				}
+			case "priority":
+				if priority == "" && a.Priority != "" {
+					priority = a.Priority
+				}
 			}
-			tag, terr := h.tags.EnsureByName(ctx, h.tenantID, r.TagKind, n)
-			if terr != nil || tag == nil || seen[tag.ID] {
-				continue
-			}
-			seen[tag.ID] = true
-			tagIDs = append(tagIDs, tag.ID)
 		}
 		h.log.Infof("iris webhook: rule %q matched ticket %s", r.Name, ticketID)
 	}
+
 	if len(tagIDs) > 0 {
 		if err := h.tags.AddTicketTags(ctx, ticketID, tagIDs); err != nil {
 			h.log.Warnf("iris webhook: apply tags to %s failed: %v", ticketID, err)
 		}
 	}
+	if assignee != nil {
+		if _, err := h.repo.Assign(ctx, h.tenantID, ticketID, *assignee); err != nil {
+			h.log.Warnf("iris webhook: assign %s failed: %v", ticketID, err)
+		}
+	}
+	if status != "" {
+		if _, err := h.repo.UpdateStatus(ctx, h.tenantID, ticketID, status); err != nil {
+			h.log.Warnf("iris webhook: set status on %s failed: %v", ticketID, err)
+		}
+	}
+	if priority != "" {
+		if _, err := h.repo.Update(ctx, h.tenantID, ticketID, nil, nil, &priority); err != nil {
+			h.log.Warnf("iris webhook: set priority on %s failed: %v", ticketID, err)
+		}
+	}
+}
+
+// ruleActions returns the rule's actions, falling back to the legacy single
+// tag action (tag_kind/tag_names) for rules saved before the actions list.
+func (h *IrisHandler) ruleActions(r *ent.TicketRule) []rules.Action {
+	var actions []rules.Action
+	if r.Actions != "" {
+		_ = json.Unmarshal([]byte(r.Actions), &actions)
+	}
+	if len(actions) == 0 && r.TagNames != "" {
+		var names []string
+		_ = json.Unmarshal([]byte(r.TagNames), &names)
+		if len(names) > 0 {
+			actions = append(actions, rules.Action{Type: "tag", TagKind: r.TagKind, TagNames: names})
+		}
+	}
+	return actions
 }
 
 // storeAttachments uploads each decoded attachment to S3 and records it.

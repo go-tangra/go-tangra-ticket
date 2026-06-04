@@ -142,8 +142,9 @@ var (
 		{Name: "match", Type: field.TypeString, Comment: "ALL (AND) or ANY (OR)", Default: "ALL"},
 		{Name: "conditions", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "JSON: [{field,operator,value}]"},
 		{Name: "expression", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "Optional raw CEL expression (overrides conditions)"},
-		{Name: "tag_kind", Type: field.TypeString, Comment: "Kind of tag created/applied: TAG or CATEGORY", Default: "TAG"},
-		{Name: "tag_names", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "JSON: tag names to apply when the rule matches"},
+		{Name: "tag_kind", Type: field.TypeString, Comment: "Legacy single tag action: kind (TAG or CATEGORY)", Default: "TAG"},
+		{Name: "tag_names", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "Legacy single tag action: JSON tag names"},
+		{Name: "actions", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "JSON: [{type,tagKind,tagNames,assigneeId,status,priority}] applied when the rule matches"},
 	}
 	// TicketRulesTable holds the schema information for the "ticket_rules" table.
 	TicketRulesTable = &schema.Table{

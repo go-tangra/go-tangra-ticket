@@ -115,6 +115,26 @@ func (x *RuleCondition) Redact() string {
 	return x.String()
 }
 
+// Redact method implementation for RuleAction
+func (x *RuleAction) Redact() string {
+	if x == nil {
+		return ""
+	}
+
+	// Safe field: Type
+
+	// Safe field: TagKind
+
+	// Safe field: TagNames
+
+	// Safe field: AssigneeId
+
+	// Safe field: Status
+
+	// Safe field: Priority
+	return x.String()
+}
+
 // Redact method implementation for TicketRule
 func (x *TicketRule) Redact() string {
 	if x == nil {
@@ -144,6 +164,8 @@ func (x *TicketRule) Redact() string {
 	// Safe field: CreateTime
 
 	// Safe field: UpdateTime
+
+	// Safe field: Actions
 	return x.String()
 }
 
@@ -206,6 +228,8 @@ func (x *RuleInput) Redact() string {
 	// Safe field: TagKind
 
 	// Safe field: TagNames
+
+	// Safe field: Actions
 	return x.String()
 }
 

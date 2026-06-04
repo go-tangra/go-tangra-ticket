@@ -36,6 +36,8 @@ const (
 	FieldTagKind = "tag_kind"
 	// FieldTagNames holds the string denoting the tag_names field in the database.
 	FieldTagNames = "tag_names"
+	// FieldActions holds the string denoting the actions field in the database.
+	FieldActions = "actions"
 	// Table holds the table name of the ticketrule in the database.
 	Table = "ticket_rules"
 )
@@ -55,6 +57,7 @@ var Columns = []string{
 	FieldExpression,
 	FieldTagKind,
 	FieldTagNames,
+	FieldActions,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -157,4 +160,9 @@ func ByTagKind(opts ...sql.OrderTermOption) OrderOption {
 // ByTagNames orders the results by the tag_names field.
 func ByTagNames(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTagNames, opts...).ToFunc()
+}
+
+// ByActions orders the results by the actions field.
+func ByActions(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldActions, opts...).ToFunc()
 }

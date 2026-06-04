@@ -22,7 +22,7 @@ import (
 // Injectors from wire.go:
 
 func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
-	certManager, err := cert.NewCertManager(context)
+	v, err := cert.NewCertManager(context)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -36,7 +36,7 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 	ticketService := service.NewTicketService(context, ticketRepo, attachmentRepo, collector)
 	commentRepo := data.NewCommentRepo(context, entClient)
 	commentService := service.NewCommentService(context, commentRepo, ticketRepo)
-	adminClient, cleanup2, err := client.NewAdminClient(context, certManager)
+	adminClient, cleanup2, err := client.NewAdminClient(context, v)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -52,7 +52,7 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	ruleService := service.NewRuleService(context, ruleRepo, engine)
-	grpcServer := server.NewGRPCServer(context, certManager, ticketService, commentService, userService, tagService, ruleService)
+	grpcServer := server.NewGRPCServer(context, v, ticketService, commentService, userService, tagService, ruleService)
 	storageClient, cleanup3, err := data.NewStorageClient(context)
 	if err != nil {
 		cleanup2()

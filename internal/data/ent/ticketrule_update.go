@@ -206,6 +206,26 @@ func (_u *TicketRuleUpdate) ClearTagNames() *TicketRuleUpdate {
 	return _u
 }
 
+// SetActions sets the "actions" field.
+func (_u *TicketRuleUpdate) SetActions(v string) *TicketRuleUpdate {
+	_u.mutation.SetActions(v)
+	return _u
+}
+
+// SetNillableActions sets the "actions" field if the given value is not nil.
+func (_u *TicketRuleUpdate) SetNillableActions(v *string) *TicketRuleUpdate {
+	if v != nil {
+		_u.SetActions(*v)
+	}
+	return _u
+}
+
+// ClearActions clears the value of the "actions" field.
+func (_u *TicketRuleUpdate) ClearActions() *TicketRuleUpdate {
+	_u.mutation.ClearActions()
+	return _u
+}
+
 // Mutation returns the TicketRuleMutation object of the builder.
 func (_u *TicketRuleUpdate) Mutation() *TicketRuleMutation {
 	return _u.mutation
@@ -319,6 +339,12 @@ func (_u *TicketRuleUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.TagNamesCleared() {
 		_spec.ClearField(ticketrule.FieldTagNames, field.TypeString)
+	}
+	if value, ok := _u.mutation.Actions(); ok {
+		_spec.SetField(ticketrule.FieldActions, field.TypeString, value)
+	}
+	if _u.mutation.ActionsCleared() {
+		_spec.ClearField(ticketrule.FieldActions, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -519,6 +545,26 @@ func (_u *TicketRuleUpdateOne) ClearTagNames() *TicketRuleUpdateOne {
 	return _u
 }
 
+// SetActions sets the "actions" field.
+func (_u *TicketRuleUpdateOne) SetActions(v string) *TicketRuleUpdateOne {
+	_u.mutation.SetActions(v)
+	return _u
+}
+
+// SetNillableActions sets the "actions" field if the given value is not nil.
+func (_u *TicketRuleUpdateOne) SetNillableActions(v *string) *TicketRuleUpdateOne {
+	if v != nil {
+		_u.SetActions(*v)
+	}
+	return _u
+}
+
+// ClearActions clears the value of the "actions" field.
+func (_u *TicketRuleUpdateOne) ClearActions() *TicketRuleUpdateOne {
+	_u.mutation.ClearActions()
+	return _u
+}
+
 // Mutation returns the TicketRuleMutation object of the builder.
 func (_u *TicketRuleUpdateOne) Mutation() *TicketRuleMutation {
 	return _u.mutation
@@ -662,6 +708,12 @@ func (_u *TicketRuleUpdateOne) sqlSave(ctx context.Context) (_node *TicketRule, 
 	}
 	if _u.mutation.TagNamesCleared() {
 		_spec.ClearField(ticketrule.FieldTagNames, field.TypeString)
+	}
+	if value, ok := _u.mutation.Actions(); ok {
+		_spec.SetField(ticketrule.FieldActions, field.TypeString, value)
+	}
+	if _u.mutation.ActionsCleared() {
+		_spec.ClearField(ticketrule.FieldActions, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &TicketRule{config: _u.config}

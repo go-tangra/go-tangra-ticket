@@ -33,6 +33,7 @@ type RuleData struct {
 	Expression string
 	TagKind    string
 	TagNames   string
+	Actions    string
 }
 
 func (r *RuleRepo) Create(ctx context.Context, d RuleData) (*ent.TicketRule, error) {
@@ -47,6 +48,7 @@ func (r *RuleRepo) Create(ctx context.Context, d RuleData) (*ent.TicketRule, err
 		SetExpression(d.Expression).
 		SetTagKind(normKind(d.TagKind)).
 		SetTagNames(d.TagNames).
+		SetActions(d.Actions).
 		SetCreateTime(time.Now()).
 		SetUpdateTime(time.Now()).
 		Save(ctx)
@@ -89,6 +91,7 @@ func (r *RuleRepo) Update(ctx context.Context, tenantID uint32, id string, d Rul
 		SetExpression(d.Expression).
 		SetTagKind(normKind(d.TagKind)).
 		SetTagNames(d.TagNames).
+		SetActions(d.Actions).
 		SetUpdateTime(time.Now()).
 		Save(ctx)
 	if err != nil {

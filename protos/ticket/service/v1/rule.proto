@@ -10,11 +10,27 @@ import "google/protobuf/timestamp.proto";
 
 // RuleCondition is one row of the Cloudflare-style rule builder.
 message RuleCondition {
-  // field: subject | body | from | fromName | recipient
+  // field: subject | body | from | fromName | recipient | hasAttachments
   string field = 1 [json_name = "field"];
   // operator: contains | not_contains | equals | not_equals | starts_with | ends_with | matches
+  // (ignored for the boolean field hasAttachments; value is "true"/"false")
   string operator = 2 [json_name = "operator"];
   string value = 3 [json_name = "value"];
+}
+
+// RuleAction is one row of the "Then apply" block. A rule may have several.
+message RuleAction {
+  // type: tag | assign | status | priority
+  string type = 1 [json_name = "type"];
+  // tag: kind (TAG|CATEGORY) and the names to create/apply.
+  string tag_kind = 2 [json_name = "tagKind"];
+  repeated string tag_names = 3 [json_name = "tagNames"];
+  // assign: internal user id to assign the ticket to (0 = unassign).
+  uint32 assignee_id = 4 [json_name = "assigneeId"];
+  // status: TICKET_STATUS_* enum-name string.
+  string status = 5 [json_name = "status"];
+  // priority: TICKET_PRIORITY_* enum-name string.
+  string priority = 6 [json_name = "priority"];
 }
 
 // TicketRule auto-applies tags/categories to inbound tickets.
@@ -29,10 +45,13 @@ message TicketRule {
   repeated RuleCondition conditions = 7 [json_name = "conditions"];
   // expression overrides conditions when set (raw CEL).
   string expression = 8 [json_name = "expression"];
+  // tag_kind/tag_names are the legacy single tag action, kept for
+  // backward compatibility; new rules use the actions list.
   string tag_kind = 9 [json_name = "tagKind"];
   repeated string tag_names = 10 [json_name = "tagNames"];
   google.protobuf.Timestamp create_time = 11 [json_name = "createTime"];
   google.protobuf.Timestamp update_time = 12 [json_name = "updateTime"];
+  repeated RuleAction actions = 13 [json_name = "actions"];
 }
 
 service TicketRuleService {
@@ -80,6 +99,7 @@ message RuleInput {
   string expression = 6 [json_name = "expression"];
   string tag_kind = 7 [json_name = "tagKind"];
   repeated string tag_names = 8 [json_name = "tagNames"];
+  repeated RuleAction actions = 9 [json_name = "actions"];
 }
 
 message CreateRuleRequest {

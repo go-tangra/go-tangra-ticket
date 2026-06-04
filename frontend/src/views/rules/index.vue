@@ -11,27 +11,42 @@ import {
   Select,
   Switch,
   Table,
-  Tag,
 } from 'ant-design-vue';
 
 import { $t } from 'shell/locales';
 
-import type { RuleCondition, RuleInput, TicketRule } from '../../api/client';
+import type {
+  AssignableUser,
+  RuleAction,
+  RuleCondition,
+  RuleInput,
+  TicketRule,
+} from '../../api/client';
 import { useTagStore } from '../../stores/tag.state';
+import { useTicketStore } from '../../stores/ticket.state';
 import {
+  humanizeEnum,
+  priorityOptions,
+  statusOptions,
+} from '../tickets/helpers';
+import {
+  actionTypeOptions,
+  booleanFields,
+  booleanValueOptions,
   fieldLabel,
   fieldOptions,
   matchOptions,
   operatorLabel,
   operatorOptions,
-  tagColor,
   tagKindOptions,
 } from './helpers';
 
 const store = useTagStore();
+const ticketStore = useTicketStore();
 
 const rows = ref<TicketRule[]>([]);
 const loading = ref(false);
+const users = ref<AssignableUser[]>([]);
 
 const modalOpen = ref(false);
 const saving = ref(false);
@@ -43,8 +58,7 @@ type FormState = {
   sortOrder: number;
   match: string;
   conditions: RuleCondition[];
-  tagKind: string;
-  tagNames: string[];
+  actions: RuleAction[];
 };
 
 const form = reactive<FormState>({
@@ -52,10 +66,29 @@ const form = reactive<FormState>({
   enabled: true,
   sortOrder: 0,
   match: 'ALL',
-  conditions: [{ field: 'subject', operator: 'contains', value: '' }],
-  tagKind: 'TAG',
-  tagNames: [],
+  conditions: [newCondition()],
+  actions: [newAction('tag')],
 });
+
+function newCondition(): RuleCondition {
+  return { field: 'subject', operator: 'contains', value: '' };
+}
+
+function newAction(type: string): RuleAction {
+  return {
+    type,
+    tagKind: 'TAG',
+    tagNames: [],
+    assigneeId: 0,
+    status: 'TICKET_STATUS_OPEN',
+    priority: 'TICKET_PRIORITY_NORMAL',
+  };
+}
+
+const assigneeOptions = () => [
+  { value: 0, label: $t('ticket.page.ticket.unassigned') },
+  ...users.value.map((u) => ({ value: u.id, label: u.name || u.username })),
+];
 
 async function load() {
   loading.value = true;
@@ -68,8 +101,23 @@ async function load() {
   }
 }
 
-function newCondition(): RuleCondition {
-  return { field: 'subject', operator: 'contains', value: '' };
+async function loadUsers() {
+  try {
+    users.value = await ticketStore.listAssignableUsers();
+  } catch {
+    // best-effort: assign action still works by typing handled elsewhere
+  }
+}
+
+function isBoolean(field?: string): boolean {
+  return !!field && booleanFields.has(field);
+}
+
+function onFieldChange(cond: RuleCondition) {
+  // Switching to a boolean field seeds a sensible default value.
+  if (isBoolean(cond.field)) {
+    if (cond.value !== 'true' && cond.value !== 'false') cond.value = 'true';
+  }
 }
 
 function openCreate() {
@@ -79,9 +127,21 @@ function openCreate() {
   form.sortOrder = (rows.value.length + 1) * 10;
   form.match = 'ALL';
   form.conditions = [newCondition()];
-  form.tagKind = 'TAG';
-  form.tagNames = [];
+  form.actions = [newAction('tag')];
   modalOpen.value = true;
+}
+
+function actionsFromRule(row: TicketRule): RuleAction[] {
+  if (row.actions && row.actions.length) {
+    return row.actions.map((a) => ({ ...newAction(a.type || 'tag'), ...a }));
+  }
+  // Backward compat: legacy single tag action.
+  if (row.tagNames && row.tagNames.length) {
+    return [
+      { ...newAction('tag'), tagKind: row.tagKind || 'TAG', tagNames: [...row.tagNames] },
+    ];
+  }
+  return [newAction('tag')];
 }
 
 function openEdit(row: TicketRule) {
@@ -94,8 +154,7 @@ function openEdit(row: TicketRule) {
     row.conditions && row.conditions.length
       ? row.conditions.map((c) => ({ ...c }))
       : [newCondition()];
-  form.tagKind = row.tagKind || 'TAG';
-  form.tagNames = [...(row.tagNames ?? [])];
+  form.actions = actionsFromRule(row);
   modalOpen.value = true;
 }
 
@@ -108,18 +167,47 @@ function removeCondition(idx: number) {
   if (form.conditions.length === 0) form.conditions.push(newCondition());
 }
 
+function addAction() {
+  form.actions.push(newAction('tag'));
+}
+
+function removeAction(idx: number) {
+  form.actions.splice(idx, 1);
+  if (form.actions.length === 0) form.actions.push(newAction('tag'));
+}
+
+// Keep only actions that carry meaningful parameters.
+function cleanActions(): RuleAction[] {
+  const out: RuleAction[] = [];
+  for (const a of form.actions) {
+    if (a.type === 'tag') {
+      if (a.tagNames && a.tagNames.length) {
+        out.push({ type: 'tag', tagKind: a.tagKind, tagNames: a.tagNames });
+      }
+    } else if (a.type === 'assign') {
+      out.push({ type: 'assign', assigneeId: a.assigneeId ?? 0 });
+    } else if (a.type === 'status') {
+      if (a.status) out.push({ type: 'status', status: a.status });
+    } else if (a.type === 'priority') {
+      if (a.priority) out.push({ type: 'priority', priority: a.priority });
+    }
+  }
+  return out;
+}
+
 async function save() {
   if (!form.name.trim()) {
     antMessage.warning($t('ticket.page.rule.nameRequired'));
     return;
   }
-  if (!form.tagNames.length) {
-    antMessage.warning($t('ticket.page.rule.tagsRequired'));
-    return;
-  }
   const conditions = form.conditions.filter((c) => (c.value ?? '').trim() !== '');
   if (!conditions.length) {
     antMessage.warning($t('ticket.page.rule.conditionRequired'));
+    return;
+  }
+  const actions = cleanActions();
+  if (!actions.length) {
+    antMessage.warning($t('ticket.page.rule.actionRequired'));
     return;
   }
   const rule: RuleInput = {
@@ -129,8 +217,9 @@ async function save() {
     match: form.match,
     conditions,
     expression: '',
-    tagKind: form.tagKind,
-    tagNames: form.tagNames,
+    tagKind: '',
+    tagNames: [],
+    actions,
   };
   saving.value = true;
   try {
@@ -158,8 +247,9 @@ async function toggleEnabled(row: TicketRule, value: boolean) {
       match: row.match,
       conditions: row.conditions ?? [],
       expression: row.expression ?? '',
-      tagKind: row.tagKind,
-      tagNames: row.tagNames ?? [],
+      tagKind: '',
+      tagNames: [],
+      actions: actionsFromRule(row),
     });
     row.enabled = value;
   } catch (e: any) {
@@ -178,22 +268,53 @@ async function remove(row: TicketRule) {
   }
 }
 
-function summarize(row: TicketRule): string {
+function userName(id?: number): string {
+  if (!id) return $t('ticket.page.ticket.unassigned');
+  const u = users.value.find((x) => x.id === id);
+  return u ? u.name || u.username : `#${id}`;
+}
+
+function conditionText(c: RuleCondition): string {
+  if (isBoolean(c.field)) {
+    return `${fieldLabel(c.field)} = ${c.value === 'false' ? 'No' : 'Yes'}`;
+  }
+  return `${fieldLabel(c.field)} ${operatorLabel(c.operator)} "${c.value}"`;
+}
+
+function summarizeConditions(row: TicketRule): string {
   const conds = (row.conditions ?? [])
-    .map((c) => `${fieldLabel(c.field)} ${operatorLabel(c.operator)} "${c.value}"`)
+    .map(conditionText)
     .join(row.match === 'ANY' ? '  OR  ' : '  AND  ');
   return conds || '—';
 }
 
+function actionText(a: RuleAction): string {
+  switch (a.type) {
+    case 'tag':
+      return `${$t('ticket.page.rule.actionTag')}: ${(a.tagNames ?? []).join(', ')}`;
+    case 'assign':
+      return `${$t('ticket.page.rule.actionAssign')}: ${userName(a.assigneeId)}`;
+    case 'status':
+      return `${$t('ticket.page.rule.actionStatus')}: ${humanizeEnum(a.status)}`;
+    case 'priority':
+      return `${$t('ticket.page.rule.actionPriority')}: ${humanizeEnum(a.priority)}`;
+    default:
+      return a.type ?? '';
+  }
+}
+
 const columns = [
-  { title: $t('ticket.page.rule.name'), key: 'name', width: 180 },
+  { title: $t('ticket.page.rule.name'), key: 'name', width: 160 },
   { title: $t('ticket.page.rule.conditions'), key: 'summary', ellipsis: true },
-  { title: $t('ticket.page.rule.tags'), key: 'tags', width: 200 },
-  { title: $t('ticket.page.rule.enabled'), key: 'enabled', width: 90 },
-  { title: '', key: 'actions', width: 150 },
+  { title: $t('ticket.page.rule.actions'), key: 'actions', width: 240 },
+  { title: $t('ticket.page.rule.enabled'), key: 'enabled', width: 80 },
+  { title: '', key: 'ops', width: 140 },
 ];
 
-onMounted(load);
+onMounted(() => {
+  load();
+  loadUsers();
+});
 </script>
 
 <template>
@@ -215,16 +336,16 @@ onMounted(load);
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'summary'">
-          <span style="font-size: 12px; color: #555">{{ summarize(record) }}</span>
+          <span style="font-size: 12px; color: #555">{{ summarizeConditions(record) }}</span>
         </template>
-        <template v-else-if="column.key === 'tags'">
-          <Tag
-            v-for="n in record.tagNames || []"
-            :key="n"
-            :color="tagColor(undefined, n)"
+        <template v-else-if="column.key === 'actions'">
+          <div
+            v-for="(a, i) in actionsFromRule(record)"
+            :key="i"
+            style="font-size: 12px; color: #555"
           >
-            {{ n }}
-          </Tag>
+            {{ actionText(a) }}
+          </div>
         </template>
         <template v-else-if="column.key === 'enabled'">
           <Switch
@@ -233,7 +354,7 @@ onMounted(load);
             @change="(v: any) => toggleEnabled(record, v)"
           />
         </template>
-        <template v-else-if="column.key === 'actions'">
+        <template v-else-if="column.key === 'ops'">
           <Button size="small" type="link" @click="openEdit(record)">
             {{ $t('ticket.action.edit') }}
           </Button>
@@ -248,7 +369,7 @@ onMounted(load);
       v-model:open="modalOpen"
       :title="editingId ? $t('ticket.page.rule.edit') : $t('ticket.page.rule.create')"
       :confirm-loading="saving"
-      width="760px"
+      width="820px"
       @ok="save"
     >
       <div style="display: flex; flex-direction: column; gap: 14px; padding: 8px 0">
@@ -286,18 +407,28 @@ onMounted(load);
             <Select
               v-model:value="cond.field"
               :options="fieldOptions"
-              style="width: 150px"
+              style="width: 160px"
+              @change="() => onFieldChange(cond)"
             />
-            <Select
-              v-model:value="cond.operator"
-              :options="operatorOptions"
-              style="width: 180px"
-            />
-            <Input
-              v-model:value="cond.value"
-              :placeholder="$t('ticket.page.rule.value')"
-              style="flex: 1"
-            />
+            <template v-if="isBoolean(cond.field)">
+              <Select
+                v-model:value="cond.value"
+                :options="booleanValueOptions"
+                style="width: 360px"
+              />
+            </template>
+            <template v-else>
+              <Select
+                v-model:value="cond.operator"
+                :options="operatorOptions"
+                style="width: 170px"
+              />
+              <Input
+                v-model:value="cond.value"
+                :placeholder="$t('ticket.page.rule.value')"
+                style="flex: 1"
+              />
+            </template>
             <Button
               type="text"
               danger
@@ -314,25 +445,80 @@ onMounted(load);
           </Button>
         </div>
 
-        <!-- THEN: tags to apply -->
+        <!-- THEN: multiple actions -->
         <div style="border: 1px solid var(--border, #e5e7eb); border-radius: 8px; padding: 12px">
           <div style="margin-bottom: 10px"><b>{{ $t('ticket.page.rule.then') }}</b></div>
-          <div style="display: flex; gap: 12px">
-            <div style="width: 160px">
-              <div style="margin-bottom: 4px; font-weight: 500">{{ $t('ticket.page.rule.tagKind') }}</div>
-              <Select v-model:value="form.tagKind" :options="tagKindOptions" style="width: 100%" />
-            </div>
-            <div style="flex: 1">
-              <div style="margin-bottom: 4px; font-weight: 500">{{ $t('ticket.page.rule.tags') }}</div>
+
+          <div
+            v-for="(act, idx) in form.actions"
+            :key="idx"
+            style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px"
+          >
+            <Select
+              v-model:value="act.type"
+              :options="actionTypeOptions"
+              style="width: 160px"
+            />
+
+            <!-- tag params -->
+            <template v-if="act.type === 'tag'">
               <Select
-                v-model:value="form.tagNames"
+                v-model:value="act.tagKind"
+                :options="tagKindOptions"
+                style="width: 130px"
+              />
+              <Select
+                v-model:value="act.tagNames"
                 mode="tags"
                 :placeholder="$t('ticket.page.rule.tagsPlaceholder')"
-                style="width: 100%"
+                style="flex: 1"
                 :token-separators="[',']"
               />
-            </div>
+            </template>
+
+            <!-- assign params -->
+            <template v-else-if="act.type === 'assign'">
+              <Select
+                v-model:value="act.assigneeId"
+                :options="assigneeOptions()"
+                style="flex: 1"
+                show-search
+                option-filter-prop="label"
+              />
+            </template>
+
+            <!-- status params -->
+            <template v-else-if="act.type === 'status'">
+              <Select
+                v-model:value="act.status"
+                :options="statusOptions"
+                style="flex: 1"
+              />
+            </template>
+
+            <!-- priority params -->
+            <template v-else-if="act.type === 'priority'">
+              <Select
+                v-model:value="act.priority"
+                :options="priorityOptions"
+                style="flex: 1"
+              />
+            </template>
+
+            <Button
+              type="text"
+              danger
+              size="small"
+              :disabled="form.actions.length === 1"
+              @click="removeAction(idx)"
+            >
+              ✕
+            </Button>
           </div>
+
+          <Button type="dashed" size="small" block @click="addAction">
+            + {{ $t('ticket.page.rule.addAction') }}
+          </Button>
           <div style="margin-top: 6px; color: #888; font-size: 12px">
             {{ $t('ticket.page.rule.tagsHint') }}
           </div>

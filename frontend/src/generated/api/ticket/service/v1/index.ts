@@ -139,11 +139,27 @@ type wellKnownEmpty = Record<never, never>;
 
 // RuleCondition is one row of the Cloudflare-style rule builder.
 export type RuleCondition = {
-  // field: subject | body | from | fromName | recipient
+  // field: subject | body | from | fromName | recipient | hasAttachments
   field: string | undefined;
   // operator: contains | not_contains | equals | not_equals | starts_with | ends_with | matches
+  // (ignored for the boolean field hasAttachments; value is "true"/"false")
   operator: string | undefined;
   value: string | undefined;
+};
+
+// RuleAction is one row of the "Then apply" block. A rule may have several.
+export type RuleAction = {
+  // type: tag | assign | status | priority
+  type: string | undefined;
+  // tag: kind (TAG|CATEGORY) and the names to create/apply.
+  tagKind: string | undefined;
+  tagNames: string[] | undefined;
+  // assign: internal user id to assign the ticket to (0 = unassign).
+  assigneeId: number | undefined;
+  // status: TICKET_STATUS_* enum-name string.
+  status: string | undefined;
+  // priority: TICKET_PRIORITY_* enum-name string.
+  priority: string | undefined;
 };
 
 // TicketRule auto-applies tags/categories to inbound tickets.
@@ -158,10 +174,13 @@ export type TicketRule = {
   conditions: RuleCondition[] | undefined;
   // expression overrides conditions when set (raw CEL).
   expression: string | undefined;
+  // tag_kind/tag_names are the legacy single tag action, kept for
+  // backward compatibility; new rules use the actions list.
   tagKind: string | undefined;
   tagNames: string[] | undefined;
   createTime: wellKnownTimestamp | undefined;
   updateTime: wellKnownTimestamp | undefined;
+  actions: RuleAction[] | undefined;
 };
 
 export type ListRulesRequest = {
@@ -190,6 +209,7 @@ export type RuleInput = {
   expression: string | undefined;
   tagKind: string | undefined;
   tagNames: string[] | undefined;
+  actions: RuleAction[] | undefined;
 };
 
 export type CreateRuleRequest = {

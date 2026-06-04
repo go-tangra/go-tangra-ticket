@@ -3753,6 +3753,7 @@ type TicketRuleMutation struct {
 	expression    *string
 	tag_kind      *string
 	tag_names     *string
+	actions       *string
 	clearedFields map[string]struct{}
 	done          bool
 	oldValue      func(context.Context) (*TicketRule, error)
@@ -4427,6 +4428,55 @@ func (m *TicketRuleMutation) ResetTagNames() {
 	delete(m.clearedFields, ticketrule.FieldTagNames)
 }
 
+// SetActions sets the "actions" field.
+func (m *TicketRuleMutation) SetActions(s string) {
+	m.actions = &s
+}
+
+// Actions returns the value of the "actions" field in the mutation.
+func (m *TicketRuleMutation) Actions() (r string, exists bool) {
+	v := m.actions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActions returns the old "actions" field's value of the TicketRule entity.
+// If the TicketRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketRuleMutation) OldActions(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActions: %w", err)
+	}
+	return oldValue.Actions, nil
+}
+
+// ClearActions clears the value of the "actions" field.
+func (m *TicketRuleMutation) ClearActions() {
+	m.actions = nil
+	m.clearedFields[ticketrule.FieldActions] = struct{}{}
+}
+
+// ActionsCleared returns if the "actions" field was cleared in this mutation.
+func (m *TicketRuleMutation) ActionsCleared() bool {
+	_, ok := m.clearedFields[ticketrule.FieldActions]
+	return ok
+}
+
+// ResetActions resets all changes to the "actions" field.
+func (m *TicketRuleMutation) ResetActions() {
+	m.actions = nil
+	delete(m.clearedFields, ticketrule.FieldActions)
+}
+
 // Where appends a list predicates to the TicketRuleMutation builder.
 func (m *TicketRuleMutation) Where(ps ...predicate.TicketRule) {
 	m.predicates = append(m.predicates, ps...)
@@ -4461,7 +4511,7 @@ func (m *TicketRuleMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TicketRuleMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.create_time != nil {
 		fields = append(fields, ticketrule.FieldCreateTime)
 	}
@@ -4498,6 +4548,9 @@ func (m *TicketRuleMutation) Fields() []string {
 	if m.tag_names != nil {
 		fields = append(fields, ticketrule.FieldTagNames)
 	}
+	if m.actions != nil {
+		fields = append(fields, ticketrule.FieldActions)
+	}
 	return fields
 }
 
@@ -4530,6 +4583,8 @@ func (m *TicketRuleMutation) Field(name string) (ent.Value, bool) {
 		return m.TagKind()
 	case ticketrule.FieldTagNames:
 		return m.TagNames()
+	case ticketrule.FieldActions:
+		return m.Actions()
 	}
 	return nil, false
 }
@@ -4563,6 +4618,8 @@ func (m *TicketRuleMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldTagKind(ctx)
 	case ticketrule.FieldTagNames:
 		return m.OldTagNames(ctx)
+	case ticketrule.FieldActions:
+		return m.OldActions(ctx)
 	}
 	return nil, fmt.Errorf("unknown TicketRule field %s", name)
 }
@@ -4656,6 +4713,13 @@ func (m *TicketRuleMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTagNames(v)
 		return nil
+	case ticketrule.FieldActions:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActions(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TicketRule field %s", name)
 }
@@ -4734,6 +4798,9 @@ func (m *TicketRuleMutation) ClearedFields() []string {
 	if m.FieldCleared(ticketrule.FieldTagNames) {
 		fields = append(fields, ticketrule.FieldTagNames)
 	}
+	if m.FieldCleared(ticketrule.FieldActions) {
+		fields = append(fields, ticketrule.FieldActions)
+	}
 	return fields
 }
 
@@ -4768,6 +4835,9 @@ func (m *TicketRuleMutation) ClearField(name string) error {
 		return nil
 	case ticketrule.FieldTagNames:
 		m.ClearTagNames()
+		return nil
+	case ticketrule.FieldActions:
+		m.ClearActions()
 		return nil
 	}
 	return fmt.Errorf("unknown TicketRule nullable field %s", name)
@@ -4812,6 +4882,9 @@ func (m *TicketRuleMutation) ResetField(name string) error {
 		return nil
 	case ticketrule.FieldTagNames:
 		m.ResetTagNames()
+		return nil
+	case ticketrule.FieldActions:
+		m.ResetActions()
 		return nil
 	}
 	return fmt.Errorf("unknown TicketRule field %s", name)
