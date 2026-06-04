@@ -16,6 +16,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 
+	"github.com/go-tangra/go-tangra-common/viewer"
 	"github.com/go-tangra/go-tangra-ticket/internal/data"
 	"github.com/go-tangra/go-tangra-ticket/internal/metrics"
 )
@@ -99,7 +100,9 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		subject = "(no subject)"
 	}
 
-	ctx := r.Context()
+	// This raw HTTP handler bypasses the gRPC middleware, so inject the
+	// system viewer that ent's tenant/privacy layer requires for writes.
+	ctx := viewer.NewSystemViewerContext(r.Context())
 
 	// Idempotency: a repeated delivery of the same message is a no-op.
 	if externalID != "" {
