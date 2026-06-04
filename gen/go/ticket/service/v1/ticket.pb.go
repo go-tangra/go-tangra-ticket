@@ -147,11 +147,14 @@ type Ticket struct {
 	TenantId uint32                 `protobuf:"varint,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	// external_id dedupes inbound emails (the RFC822 Message-Id or the
 	// X-Iris-Message-Id header). Unique per tenant when present.
-	ExternalId  string         `protobuf:"bytes,3,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
-	Subject     string         `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
-	Description string         `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	Status      TicketStatus   `protobuf:"varint,6,opt,name=status,proto3,enum=ticket.service.v1.TicketStatus" json:"status,omitempty"`
-	Priority    TicketPriority `protobuf:"varint,7,opt,name=priority,proto3,enum=ticket.service.v1.TicketPriority" json:"priority,omitempty"`
+	ExternalId  string `protobuf:"bytes,3,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	Subject     string `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	// body_html is the raw HTML body of the email when present (rendered in a
+	// sandboxed iframe by the UI). description holds the plain-text version.
+	BodyHtml string         `protobuf:"bytes,18,opt,name=body_html,json=bodyHtml,proto3" json:"body_html,omitempty"`
+	Status   TicketStatus   `protobuf:"varint,6,opt,name=status,proto3,enum=ticket.service.v1.TicketStatus" json:"status,omitempty"`
+	Priority TicketPriority `protobuf:"varint,7,opt,name=priority,proto3,enum=ticket.service.v1.TicketPriority" json:"priority,omitempty"`
 	// source identifies where the ticket came from ("iris", "manual").
 	Source         string `protobuf:"bytes,8,opt,name=source,proto3" json:"source,omitempty"`
 	RequesterEmail string `protobuf:"bytes,9,opt,name=requester_email,json=requesterEmail,proto3" json:"requester_email,omitempty"`
@@ -232,6 +235,13 @@ func (x *Ticket) GetSubject() string {
 func (x *Ticket) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *Ticket) GetBodyHtml() string {
+	if x != nil {
+		return x.BodyHtml
 	}
 	return ""
 }
@@ -1025,14 +1035,15 @@ var File_ticket_service_v1_ticket_proto protoreflect.FileDescriptor
 
 const file_ticket_service_v1_ticket_proto_rawDesc = "" +
 	"\n" +
-	"\x1eticket/service/v1/ticket.proto\x12\x11ticket.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x92\x05\n" +
+	"\x1eticket/service/v1/ticket.proto\x12\x11ticket.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x05\n" +
 	"\x06Ticket\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\rR\btenantId\x12\x1f\n" +
 	"\vexternal_id\x18\x03 \x01(\tR\n" +
 	"externalId\x12\x18\n" +
 	"\asubject\x18\x04 \x01(\tR\asubject\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x127\n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1b\n" +
+	"\tbody_html\x18\x12 \x01(\tR\bbodyHtml\x127\n" +
 	"\x06status\x18\x06 \x01(\x0e2\x1f.ticket.service.v1.TicketStatusR\x06status\x12=\n" +
 	"\bpriority\x18\a \x01(\x0e2!.ticket.service.v1.TicketPriorityR\bpriority\x12\x16\n" +
 	"\x06source\x18\b \x01(\tR\x06source\x12'\n" +

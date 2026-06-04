@@ -3,12 +3,9 @@
 package webhook
 
 import (
-	"bytes"
 	"crypto/subtle"
 	"io"
-	"mime"
 	"net/http"
-	"net/mail"
 	"os"
 	"strconv"
 	"strings"
@@ -90,11 +87,12 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject, fromName, fromEmail, text, messageID := parseEmail(body)
+	pm := parseMail(body)
+	subject, fromName, fromEmail, text := pm.subject, pm.fromName, pm.fromEmail, pm.text
 	recipient := r.Header.Get("X-Iris-Recipient")
 	externalID := r.Header.Get("X-Iris-Message-Id")
 	if externalID == "" {
-		externalID = messageID
+		externalID = pm.messageID
 	}
 	if subject == "" {
 		subject = "(no subject)"
@@ -118,6 +116,7 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		ExternalID:     externalID,
 		Subject:        subject,
 		Description:    text,
+		BodyHTML:       pm.html,
 		Source:         "iris",
 		RequesterEmail: fromEmail,
 		RequesterName:  fromName,
@@ -139,26 +138,4 @@ func writeOK(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
-}
-
-// parseEmail extracts the ticket fields from a raw RFC822 message. Multipart
-// bodies are stored as-is in v1 (the raw body becomes the description); a
-// future iteration can walk MIME parts to extract text/plain.
-func parseEmail(raw []byte) (subject, fromName, fromEmail, text, messageID string) {
-	msg, err := mail.ReadMessage(bytes.NewReader(raw))
-	if err != nil {
-		return "", "", "", string(raw), ""
-	}
-	dec := &mime.WordDecoder{}
-	subject, _ = dec.DecodeHeader(msg.Header.Get("Subject"))
-	messageID = strings.Trim(msg.Header.Get("Message-Id"), "<>")
-	if addr, e := mail.ParseAddress(msg.Header.Get("From")); e == nil {
-		fromEmail = addr.Address
-		fromName, _ = dec.DecodeHeader(addr.Name)
-	} else {
-		fromEmail = strings.TrimSpace(msg.Header.Get("From"))
-	}
-	b, _ := io.ReadAll(io.LimitReader(msg.Body, maxBodyBytes))
-	text = string(b)
-	return
 }

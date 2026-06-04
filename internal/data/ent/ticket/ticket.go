@@ -29,6 +29,8 @@ const (
 	FieldSubject = "subject"
 	// FieldDescription holds the string denoting the description field in the database.
 	FieldDescription = "description"
+	// FieldBodyHTML holds the string denoting the body_html field in the database.
+	FieldBodyHTML = "body_html"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldPriority holds the string denoting the priority field in the database.
@@ -67,6 +69,7 @@ var Columns = []string{
 	FieldExternalID,
 	FieldSubject,
 	FieldDescription,
+	FieldBodyHTML,
 	FieldStatus,
 	FieldPriority,
 	FieldSource,
@@ -156,6 +159,11 @@ func BySubject(opts ...sql.OrderTermOption) OrderOption {
 // ByDescription orders the results by the description field.
 func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByBodyHTML orders the results by the body_html field.
+func ByBodyHTML(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBodyHTML, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

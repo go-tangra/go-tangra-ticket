@@ -36,6 +36,9 @@ message Ticket {
   string external_id = 3 [json_name = "externalId"];
   string subject = 4 [json_name = "subject"];
   string description = 5 [json_name = "description"];
+  // body_html is the raw HTML body of the email when present (rendered in a
+  // sandboxed iframe by the UI). description holds the plain-text version.
+  string body_html = 18 [json_name = "bodyHtml"];
   TicketStatus status = 6 [json_name = "status"];
   TicketPriority priority = 7 [json_name = "priority"];
   // source identifies where the ticket came from ("iris", "manual").

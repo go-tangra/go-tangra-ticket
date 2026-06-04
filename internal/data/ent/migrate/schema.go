@@ -19,7 +19,8 @@ var (
 		{Name: "tenant_id", Type: field.TypeUint32, Nullable: true, Comment: "租户ID", Default: 0},
 		{Name: "external_id", Type: field.TypeString, Nullable: true, Comment: "iris/RFC822 Message-Id for dedup"},
 		{Name: "subject", Type: field.TypeString},
-		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "Plain-text body (text/plain, or HTML rendered to text)"},
+		{Name: "body_html", Type: field.TypeString, Nullable: true, Size: 2147483647, Comment: "Raw HTML body of the email, if present"},
 		{Name: "status", Type: field.TypeString, Comment: "Lifecycle status", Default: "TICKET_STATUS_OPEN"},
 		{Name: "priority", Type: field.TypeString, Default: "TICKET_PRIORITY_NORMAL"},
 		{Name: "source", Type: field.TypeString, Comment: "Origin: iris, manual", Default: "manual"},
@@ -42,12 +43,12 @@ var (
 			{
 				Name:    "ticket_tenant_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{TicketTicketsColumns[5], TicketTicketsColumns[9]},
+				Columns: []*schema.Column{TicketTicketsColumns[5], TicketTicketsColumns[10]},
 			},
 			{
 				Name:    "ticket_tenant_id_assignee_id",
 				Unique:  false,
-				Columns: []*schema.Column{TicketTicketsColumns[5], TicketTicketsColumns[15]},
+				Columns: []*schema.Column{TicketTicketsColumns[5], TicketTicketsColumns[16]},
 			},
 			{
 				Name:    "ticket_tenant_id_external_id",

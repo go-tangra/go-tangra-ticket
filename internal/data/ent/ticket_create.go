@@ -128,6 +128,20 @@ func (_c *TicketCreate) SetNillableDescription(v *string) *TicketCreate {
 	return _c
 }
 
+// SetBodyHTML sets the "body_html" field.
+func (_c *TicketCreate) SetBodyHTML(v string) *TicketCreate {
+	_c.mutation.SetBodyHTML(v)
+	return _c
+}
+
+// SetNillableBodyHTML sets the "body_html" field if the given value is not nil.
+func (_c *TicketCreate) SetNillableBodyHTML(v *string) *TicketCreate {
+	if v != nil {
+		_c.SetBodyHTML(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *TicketCreate) SetStatus(v string) *TicketCreate {
 	_c.mutation.SetStatus(v)
@@ -402,6 +416,10 @@ func (_c *TicketCreate) createSpec() (*Ticket, *sqlgraph.CreateSpec) {
 		_spec.SetField(ticket.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
+	if value, ok := _c.mutation.BodyHTML(); ok {
+		_spec.SetField(ticket.FieldBodyHTML, field.TypeString, value)
+		_node.BodyHTML = value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(ticket.FieldStatus, field.TypeString, value)
 		_node.Status = value
@@ -603,6 +621,24 @@ func (u *TicketUpsert) UpdateDescription() *TicketUpsert {
 // ClearDescription clears the value of the "description" field.
 func (u *TicketUpsert) ClearDescription() *TicketUpsert {
 	u.SetNull(ticket.FieldDescription)
+	return u
+}
+
+// SetBodyHTML sets the "body_html" field.
+func (u *TicketUpsert) SetBodyHTML(v string) *TicketUpsert {
+	u.Set(ticket.FieldBodyHTML, v)
+	return u
+}
+
+// UpdateBodyHTML sets the "body_html" field to the value that was provided on create.
+func (u *TicketUpsert) UpdateBodyHTML() *TicketUpsert {
+	u.SetExcluded(ticket.FieldBodyHTML)
+	return u
+}
+
+// ClearBodyHTML clears the value of the "body_html" field.
+func (u *TicketUpsert) ClearBodyHTML() *TicketUpsert {
+	u.SetNull(ticket.FieldBodyHTML)
 	return u
 }
 
@@ -891,6 +927,27 @@ func (u *TicketUpsertOne) UpdateDescription() *TicketUpsertOne {
 func (u *TicketUpsertOne) ClearDescription() *TicketUpsertOne {
 	return u.Update(func(s *TicketUpsert) {
 		s.ClearDescription()
+	})
+}
+
+// SetBodyHTML sets the "body_html" field.
+func (u *TicketUpsertOne) SetBodyHTML(v string) *TicketUpsertOne {
+	return u.Update(func(s *TicketUpsert) {
+		s.SetBodyHTML(v)
+	})
+}
+
+// UpdateBodyHTML sets the "body_html" field to the value that was provided on create.
+func (u *TicketUpsertOne) UpdateBodyHTML() *TicketUpsertOne {
+	return u.Update(func(s *TicketUpsert) {
+		s.UpdateBodyHTML()
+	})
+}
+
+// ClearBodyHTML clears the value of the "body_html" field.
+func (u *TicketUpsertOne) ClearBodyHTML() *TicketUpsertOne {
+	return u.Update(func(s *TicketUpsert) {
+		s.ClearBodyHTML()
 	})
 }
 
@@ -1364,6 +1421,27 @@ func (u *TicketUpsertBulk) UpdateDescription() *TicketUpsertBulk {
 func (u *TicketUpsertBulk) ClearDescription() *TicketUpsertBulk {
 	return u.Update(func(s *TicketUpsert) {
 		s.ClearDescription()
+	})
+}
+
+// SetBodyHTML sets the "body_html" field.
+func (u *TicketUpsertBulk) SetBodyHTML(v string) *TicketUpsertBulk {
+	return u.Update(func(s *TicketUpsert) {
+		s.SetBodyHTML(v)
+	})
+}
+
+// UpdateBodyHTML sets the "body_html" field to the value that was provided on create.
+func (u *TicketUpsertBulk) UpdateBodyHTML() *TicketUpsertBulk {
+	return u.Update(func(s *TicketUpsert) {
+		s.UpdateBodyHTML()
+	})
+}
+
+// ClearBodyHTML clears the value of the "body_html" field.
+func (u *TicketUpsertBulk) ClearBodyHTML() *TicketUpsertBulk {
+	return u.Update(func(s *TicketUpsert) {
+		s.ClearBodyHTML()
 	})
 }
 

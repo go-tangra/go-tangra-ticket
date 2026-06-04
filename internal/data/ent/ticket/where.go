@@ -105,6 +105,11 @@ func Description(v string) predicate.Ticket {
 	return predicate.Ticket(sql.FieldEQ(FieldDescription, v))
 }
 
+// BodyHTML applies equality check predicate on the "body_html" field. It's identical to BodyHTMLEQ.
+func BodyHTML(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldEQ(FieldBodyHTML, v))
+}
+
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.Ticket {
 	return predicate.Ticket(sql.FieldEQ(FieldStatus, v))
@@ -603,6 +608,81 @@ func DescriptionEqualFold(v string) predicate.Ticket {
 // DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
 func DescriptionContainsFold(v string) predicate.Ticket {
 	return predicate.Ticket(sql.FieldContainsFold(FieldDescription, v))
+}
+
+// BodyHTMLEQ applies the EQ predicate on the "body_html" field.
+func BodyHTMLEQ(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldEQ(FieldBodyHTML, v))
+}
+
+// BodyHTMLNEQ applies the NEQ predicate on the "body_html" field.
+func BodyHTMLNEQ(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldNEQ(FieldBodyHTML, v))
+}
+
+// BodyHTMLIn applies the In predicate on the "body_html" field.
+func BodyHTMLIn(vs ...string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldIn(FieldBodyHTML, vs...))
+}
+
+// BodyHTMLNotIn applies the NotIn predicate on the "body_html" field.
+func BodyHTMLNotIn(vs ...string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldNotIn(FieldBodyHTML, vs...))
+}
+
+// BodyHTMLGT applies the GT predicate on the "body_html" field.
+func BodyHTMLGT(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldGT(FieldBodyHTML, v))
+}
+
+// BodyHTMLGTE applies the GTE predicate on the "body_html" field.
+func BodyHTMLGTE(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldGTE(FieldBodyHTML, v))
+}
+
+// BodyHTMLLT applies the LT predicate on the "body_html" field.
+func BodyHTMLLT(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldLT(FieldBodyHTML, v))
+}
+
+// BodyHTMLLTE applies the LTE predicate on the "body_html" field.
+func BodyHTMLLTE(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldLTE(FieldBodyHTML, v))
+}
+
+// BodyHTMLContains applies the Contains predicate on the "body_html" field.
+func BodyHTMLContains(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldContains(FieldBodyHTML, v))
+}
+
+// BodyHTMLHasPrefix applies the HasPrefix predicate on the "body_html" field.
+func BodyHTMLHasPrefix(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldHasPrefix(FieldBodyHTML, v))
+}
+
+// BodyHTMLHasSuffix applies the HasSuffix predicate on the "body_html" field.
+func BodyHTMLHasSuffix(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldHasSuffix(FieldBodyHTML, v))
+}
+
+// BodyHTMLIsNil applies the IsNil predicate on the "body_html" field.
+func BodyHTMLIsNil() predicate.Ticket {
+	return predicate.Ticket(sql.FieldIsNull(FieldBodyHTML))
+}
+
+// BodyHTMLNotNil applies the NotNil predicate on the "body_html" field.
+func BodyHTMLNotNil() predicate.Ticket {
+	return predicate.Ticket(sql.FieldNotNull(FieldBodyHTML))
+}
+
+// BodyHTMLEqualFold applies the EqualFold predicate on the "body_html" field.
+func BodyHTMLEqualFold(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldEqualFold(FieldBodyHTML, v))
+}
+
+// BodyHTMLContainsFold applies the ContainsFold predicate on the "body_html" field.
+func BodyHTMLContainsFold(v string) predicate.Ticket {
+	return predicate.Ticket(sql.FieldContainsFold(FieldBodyHTML, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

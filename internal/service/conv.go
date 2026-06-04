@@ -50,6 +50,7 @@ func ticketToProto(e *ent.Ticket, commentCount int32, assigneeName string) *tick
 		ExternalId:     e.ExternalID,
 		Subject:        e.Subject,
 		Description:    e.Description,
+		BodyHtml:       e.BodyHTML,
 		Status:         statusEnum(e.Status),
 		Priority:       priorityEnum(e.Priority),
 		Source:         e.Source,

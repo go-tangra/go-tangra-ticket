@@ -139,6 +139,8 @@ func (x *Ticket) Redact() string {
 
 	// Safe field: Description
 
+	// Safe field: BodyHtml
+
 	// Safe field: Status
 
 	// Safe field: Priority

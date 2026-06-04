@@ -40,19 +40,19 @@ func init() {
 	// ticket.SubjectValidator is a validator for the "subject" field. It is called by the builders before save.
 	ticket.SubjectValidator = ticketDescSubject.Validators[0].(func(string) error)
 	// ticketDescStatus is the schema descriptor for status field.
-	ticketDescStatus := ticketFields[4].Descriptor()
+	ticketDescStatus := ticketFields[5].Descriptor()
 	// ticket.DefaultStatus holds the default value on creation for the status field.
 	ticket.DefaultStatus = ticketDescStatus.Default.(string)
 	// ticketDescPriority is the schema descriptor for priority field.
-	ticketDescPriority := ticketFields[5].Descriptor()
+	ticketDescPriority := ticketFields[6].Descriptor()
 	// ticket.DefaultPriority holds the default value on creation for the priority field.
 	ticket.DefaultPriority = ticketDescPriority.Default.(string)
 	// ticketDescSource is the schema descriptor for source field.
-	ticketDescSource := ticketFields[6].Descriptor()
+	ticketDescSource := ticketFields[7].Descriptor()
 	// ticket.DefaultSource holds the default value on creation for the source field.
 	ticket.DefaultSource = ticketDescSource.Default.(string)
 	// ticketDescAssigneeID is the schema descriptor for assignee_id field.
-	ticketDescAssigneeID := ticketFields[10].Descriptor()
+	ticketDescAssigneeID := ticketFields[11].Descriptor()
 	// ticket.DefaultAssigneeID holds the default value on creation for the assignee_id field.
 	ticket.DefaultAssigneeID = ticketDescAssigneeID.Default.(uint32)
 	// ticketDescID is the schema descriptor for id field.

@@ -32,8 +32,10 @@ type Ticket struct {
 	ExternalID string `json:"external_id,omitempty"`
 	// Subject holds the value of the "subject" field.
 	Subject string `json:"subject,omitempty"`
-	// Description holds the value of the "description" field.
+	// Plain-text body (text/plain, or HTML rendered to text)
 	Description string `json:"description,omitempty"`
+	// Raw HTML body of the email, if present
+	BodyHTML string `json:"body_html,omitempty"`
 	// Lifecycle status
 	Status string `json:"status,omitempty"`
 	// Priority holds the value of the "priority" field.
@@ -79,7 +81,7 @@ func (*Ticket) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case ticket.FieldCreateBy, ticket.FieldTenantID, ticket.FieldAssigneeID:
 			values[i] = new(sql.NullInt64)
-		case ticket.FieldID, ticket.FieldExternalID, ticket.FieldSubject, ticket.FieldDescription, ticket.FieldStatus, ticket.FieldPriority, ticket.FieldSource, ticket.FieldRequesterEmail, ticket.FieldRequesterName, ticket.FieldRecipient:
+		case ticket.FieldID, ticket.FieldExternalID, ticket.FieldSubject, ticket.FieldDescription, ticket.FieldBodyHTML, ticket.FieldStatus, ticket.FieldPriority, ticket.FieldSource, ticket.FieldRequesterEmail, ticket.FieldRequesterName, ticket.FieldRecipient:
 			values[i] = new(sql.NullString)
 		case ticket.FieldCreateTime, ticket.FieldUpdateTime, ticket.FieldDeleteTime:
 			values[i] = new(sql.NullTime)
@@ -156,6 +158,12 @@ func (_m *Ticket) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field description", values[i])
 			} else if value.Valid {
 				_m.Description = value.String
+			}
+		case ticket.FieldBodyHTML:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field body_html", values[i])
+			} else if value.Valid {
+				_m.BodyHTML = value.String
 			}
 		case ticket.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -273,6 +281,9 @@ func (_m *Ticket) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("description=")
 	builder.WriteString(_m.Description)
+	builder.WriteString(", ")
+	builder.WriteString("body_html=")
+	builder.WriteString(_m.BodyHTML)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)

@@ -45,6 +45,7 @@ type TicketMutation struct {
 	external_id     *string
 	subject         *string
 	description     *string
+	body_html       *string
 	status          *string
 	priority        *string
 	source          *string
@@ -587,6 +588,55 @@ func (m *TicketMutation) ResetDescription() {
 	delete(m.clearedFields, ticket.FieldDescription)
 }
 
+// SetBodyHTML sets the "body_html" field.
+func (m *TicketMutation) SetBodyHTML(s string) {
+	m.body_html = &s
+}
+
+// BodyHTML returns the value of the "body_html" field in the mutation.
+func (m *TicketMutation) BodyHTML() (r string, exists bool) {
+	v := m.body_html
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBodyHTML returns the old "body_html" field's value of the Ticket entity.
+// If the Ticket object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketMutation) OldBodyHTML(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBodyHTML is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBodyHTML requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBodyHTML: %w", err)
+	}
+	return oldValue.BodyHTML, nil
+}
+
+// ClearBodyHTML clears the value of the "body_html" field.
+func (m *TicketMutation) ClearBodyHTML() {
+	m.body_html = nil
+	m.clearedFields[ticket.FieldBodyHTML] = struct{}{}
+}
+
+// BodyHTMLCleared returns if the "body_html" field was cleared in this mutation.
+func (m *TicketMutation) BodyHTMLCleared() bool {
+	_, ok := m.clearedFields[ticket.FieldBodyHTML]
+	return ok
+}
+
+// ResetBodyHTML resets all changes to the "body_html" field.
+func (m *TicketMutation) ResetBodyHTML() {
+	m.body_html = nil
+	delete(m.clearedFields, ticket.FieldBodyHTML)
+}
+
 // SetStatus sets the "status" field.
 func (m *TicketMutation) SetStatus(s string) {
 	m.status = &s
@@ -986,7 +1036,7 @@ func (m *TicketMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TicketMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.create_by != nil {
 		fields = append(fields, ticket.FieldCreateBy)
 	}
@@ -1010,6 +1060,9 @@ func (m *TicketMutation) Fields() []string {
 	}
 	if m.description != nil {
 		fields = append(fields, ticket.FieldDescription)
+	}
+	if m.body_html != nil {
+		fields = append(fields, ticket.FieldBodyHTML)
 	}
 	if m.status != nil {
 		fields = append(fields, ticket.FieldStatus)
@@ -1056,6 +1109,8 @@ func (m *TicketMutation) Field(name string) (ent.Value, bool) {
 		return m.Subject()
 	case ticket.FieldDescription:
 		return m.Description()
+	case ticket.FieldBodyHTML:
+		return m.BodyHTML()
 	case ticket.FieldStatus:
 		return m.Status()
 	case ticket.FieldPriority:
@@ -1095,6 +1150,8 @@ func (m *TicketMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldSubject(ctx)
 	case ticket.FieldDescription:
 		return m.OldDescription(ctx)
+	case ticket.FieldBodyHTML:
+		return m.OldBodyHTML(ctx)
 	case ticket.FieldStatus:
 		return m.OldStatus(ctx)
 	case ticket.FieldPriority:
@@ -1173,6 +1230,13 @@ func (m *TicketMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDescription(v)
+		return nil
+	case ticket.FieldBodyHTML:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBodyHTML(v)
 		return nil
 	case ticket.FieldStatus:
 		v, ok := value.(string)
@@ -1313,6 +1377,9 @@ func (m *TicketMutation) ClearedFields() []string {
 	if m.FieldCleared(ticket.FieldDescription) {
 		fields = append(fields, ticket.FieldDescription)
 	}
+	if m.FieldCleared(ticket.FieldBodyHTML) {
+		fields = append(fields, ticket.FieldBodyHTML)
+	}
 	if m.FieldCleared(ticket.FieldRequesterEmail) {
 		fields = append(fields, ticket.FieldRequesterEmail)
 	}
@@ -1357,6 +1424,9 @@ func (m *TicketMutation) ClearField(name string) error {
 	case ticket.FieldDescription:
 		m.ClearDescription()
 		return nil
+	case ticket.FieldBodyHTML:
+		m.ClearBodyHTML()
+		return nil
 	case ticket.FieldRequesterEmail:
 		m.ClearRequesterEmail()
 		return nil
@@ -1397,6 +1467,9 @@ func (m *TicketMutation) ResetField(name string) error {
 		return nil
 	case ticket.FieldDescription:
 		m.ResetDescription()
+		return nil
+	case ticket.FieldBodyHTML:
+		m.ResetBodyHTML()
 		return nil
 	case ticket.FieldStatus:
 		m.ResetStatus()

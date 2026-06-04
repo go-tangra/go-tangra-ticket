@@ -36,7 +36,11 @@ func (Ticket) Fields() []ent.Field {
 		field.String("subject").
 			NotEmpty(),
 		field.Text("description").
-			Optional(),
+			Optional().
+			Comment("Plain-text body (text/plain, or HTML rendered to text)"),
+		field.Text("body_html").
+			Optional().
+			Comment("Raw HTML body of the email, if present"),
 		field.String("status").
 			Default("TICKET_STATUS_OPEN").
 			Comment("Lifecycle status"),

@@ -32,6 +32,7 @@ type NewTicket struct {
 	ExternalID     string
 	Subject        string
 	Description    string
+	BodyHTML       string
 	Priority       string
 	Source         string
 	RequesterEmail string
@@ -62,6 +63,7 @@ func (r *TicketRepo) Create(ctx context.Context, t NewTicket) (*ent.Ticket, erro
 		SetTenantID(t.TenantID).
 		SetSubject(t.Subject).
 		SetDescription(t.Description).
+		SetBodyHTML(t.BodyHTML).
 		SetStatus("TICKET_STATUS_OPEN").
 		SetPriority(orDefault(t.Priority, "TICKET_PRIORITY_NORMAL")).
 		SetSource(orDefault(t.Source, "manual")).

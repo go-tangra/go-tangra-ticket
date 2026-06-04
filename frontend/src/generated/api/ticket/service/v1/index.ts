@@ -161,6 +161,9 @@ export type Ticket = {
   externalId: string | undefined;
   subject: string | undefined;
   description: string | undefined;
+  // body_html is the raw HTML body of the email when present (rendered in a
+  // sandboxed iframe by the UI). description holds the plain-text version.
+  bodyHtml: string | undefined;
   status: TicketStatus | undefined;
   priority: TicketPriority | undefined;
   // source identifies where the ticket came from ("iris", "manual").

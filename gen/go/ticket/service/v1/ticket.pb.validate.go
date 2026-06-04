@@ -66,6 +66,8 @@ func (m *Ticket) validate(all bool) error {
 
 	// no validation rules for Description
 
+	// no validation rules for BodyHtml
+
 	// no validation rules for Status
 
 	// no validation rules for Priority

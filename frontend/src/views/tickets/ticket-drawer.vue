@@ -22,6 +22,7 @@ import type {
   TicketStatus,
 } from '../../api/client';
 import { useTicketStore } from '../../stores/ticket.state';
+import EmailViewer from './EmailViewer.vue';
 import { humanizeEnum, priorityColor, statusColor, statusOptions } from './helpers';
 
 const props = defineProps<{
@@ -174,8 +175,11 @@ const assigneeOptions = () => [
 
         <Divider style="margin: 12px 0" />
 
-        <div style="white-space: pre-wrap; word-break: break-word; margin-bottom: 16px">
-          {{ ticket.description || '(no body)' }}
+        <div style="margin-bottom: 16px">
+          <EmailViewer
+            :html-content="ticket.bodyHtml"
+            :text-content="ticket.description"
+          />
         </div>
 
         <Divider style="margin: 12px 0" />

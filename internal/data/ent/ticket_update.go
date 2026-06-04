@@ -151,6 +151,26 @@ func (_u *TicketUpdate) ClearDescription() *TicketUpdate {
 	return _u
 }
 
+// SetBodyHTML sets the "body_html" field.
+func (_u *TicketUpdate) SetBodyHTML(v string) *TicketUpdate {
+	_u.mutation.SetBodyHTML(v)
+	return _u
+}
+
+// SetNillableBodyHTML sets the "body_html" field if the given value is not nil.
+func (_u *TicketUpdate) SetNillableBodyHTML(v *string) *TicketUpdate {
+	if v != nil {
+		_u.SetBodyHTML(*v)
+	}
+	return _u
+}
+
+// ClearBodyHTML clears the value of the "body_html" field.
+func (_u *TicketUpdate) ClearBodyHTML() *TicketUpdate {
+	_u.mutation.ClearBodyHTML()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *TicketUpdate) SetStatus(v string) *TicketUpdate {
 	_u.mutation.SetStatus(v)
@@ -412,6 +432,12 @@ func (_u *TicketUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(ticket.FieldDescription, field.TypeString)
 	}
+	if value, ok := _u.mutation.BodyHTML(); ok {
+		_spec.SetField(ticket.FieldBodyHTML, field.TypeString, value)
+	}
+	if _u.mutation.BodyHTMLCleared() {
+		_spec.ClearField(ticket.FieldBodyHTML, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(ticket.FieldStatus, field.TypeString, value)
 	}
@@ -630,6 +656,26 @@ func (_u *TicketUpdateOne) SetNillableDescription(v *string) *TicketUpdateOne {
 // ClearDescription clears the value of the "description" field.
 func (_u *TicketUpdateOne) ClearDescription() *TicketUpdateOne {
 	_u.mutation.ClearDescription()
+	return _u
+}
+
+// SetBodyHTML sets the "body_html" field.
+func (_u *TicketUpdateOne) SetBodyHTML(v string) *TicketUpdateOne {
+	_u.mutation.SetBodyHTML(v)
+	return _u
+}
+
+// SetNillableBodyHTML sets the "body_html" field if the given value is not nil.
+func (_u *TicketUpdateOne) SetNillableBodyHTML(v *string) *TicketUpdateOne {
+	if v != nil {
+		_u.SetBodyHTML(*v)
+	}
+	return _u
+}
+
+// ClearBodyHTML clears the value of the "body_html" field.
+func (_u *TicketUpdateOne) ClearBodyHTML() *TicketUpdateOne {
+	_u.mutation.ClearBodyHTML()
 	return _u
 }
 
@@ -923,6 +969,12 @@ func (_u *TicketUpdateOne) sqlSave(ctx context.Context) (_node *Ticket, err erro
 	}
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(ticket.FieldDescription, field.TypeString)
+	}
+	if value, ok := _u.mutation.BodyHTML(); ok {
+		_spec.SetField(ticket.FieldBodyHTML, field.TypeString, value)
+	}
+	if _u.mutation.BodyHTMLCleared() {
+		_spec.ClearField(ticket.FieldBodyHTML, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(ticket.FieldStatus, field.TypeString, value)
