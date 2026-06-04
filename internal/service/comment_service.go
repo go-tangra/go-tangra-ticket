@@ -107,7 +107,7 @@ func (s *CommentService) ReplyTicket(ctx context.Context, req *ticketpb.ReplyTic
 	if from == "" {
 		from = s.mail.DefaultFrom()
 	}
-	msgID := s.mail.GenMessageID(tk.ID)
+	msgID := s.mail.GenMessageID(tk.ID, from)
 
 	// Build the References chain: thread root + the most recent message we have.
 	var refs []string

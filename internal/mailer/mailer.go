@@ -92,9 +92,15 @@ func (m *Mailer) Domain() string { return m.cfg.Domain }
 // DefaultFrom returns the fallback From address.
 func (m *Mailer) DefaultFrom() string { return m.cfg.DefaultFrom }
 
-// GenMessageID returns a fresh, unique bare message-id tied to a ticket.
-func (m *Mailer) GenMessageID(ticketID string) string {
-	return fmt.Sprintf("ticket.%s.%s@%s", ticketID, uuid.NewString(), m.cfg.Domain)
+// GenMessageID returns a fresh, unique bare message-id tied to a ticket. The
+// domain is taken from the From address (best for deliverability), falling back
+// to the configured mail domain.
+func (m *Mailer) GenMessageID(ticketID, from string) string {
+	domain := domainOf(from)
+	if domain == "" {
+		domain = m.cfg.Domain
+	}
+	return fmt.Sprintf("ticket.%s.%s@%s", ticketID, uuid.NewString(), domain)
 }
 
 // Send delivers one message over the SMTP relay.
