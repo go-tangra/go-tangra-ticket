@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/schema"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketattachment"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
 
 	"entgo.io/ent"
@@ -59,6 +60,44 @@ func init() {
 	ticketDescID := ticketFields[0].Descriptor()
 	// ticket.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	ticket.IDValidator = ticketDescID.Validators[0].(func(string) error)
+	ticketattachmentMixin := schema.TicketAttachment{}.Mixin()
+	ticketattachment.Policy = privacy.NewPolicies(ticketattachmentMixin[1], schema.TicketAttachment{})
+	ticketattachment.Hooks[0] = func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+			if err := ticketattachment.Policy.EvalMutation(ctx, m); err != nil {
+				return nil, err
+			}
+			return next.Mutate(ctx, m)
+		})
+	}
+	ticketattachmentMixinFields1 := ticketattachmentMixin[1].Fields()
+	_ = ticketattachmentMixinFields1
+	ticketattachmentFields := schema.TicketAttachment{}.Fields()
+	_ = ticketattachmentFields
+	// ticketattachmentDescTenantID is the schema descriptor for tenant_id field.
+	ticketattachmentDescTenantID := ticketattachmentMixinFields1[0].Descriptor()
+	// ticketattachment.DefaultTenantID holds the default value on creation for the tenant_id field.
+	ticketattachment.DefaultTenantID = ticketattachmentDescTenantID.Default.(uint32)
+	// ticketattachmentDescTicketID is the schema descriptor for ticket_id field.
+	ticketattachmentDescTicketID := ticketattachmentFields[1].Descriptor()
+	// ticketattachment.TicketIDValidator is a validator for the "ticket_id" field. It is called by the builders before save.
+	ticketattachment.TicketIDValidator = ticketattachmentDescTicketID.Validators[0].(func(string) error)
+	// ticketattachmentDescSize is the schema descriptor for size field.
+	ticketattachmentDescSize := ticketattachmentFields[4].Descriptor()
+	// ticketattachment.DefaultSize holds the default value on creation for the size field.
+	ticketattachment.DefaultSize = ticketattachmentDescSize.Default.(int64)
+	// ticketattachmentDescStorageKey is the schema descriptor for storage_key field.
+	ticketattachmentDescStorageKey := ticketattachmentFields[5].Descriptor()
+	// ticketattachment.StorageKeyValidator is a validator for the "storage_key" field. It is called by the builders before save.
+	ticketattachment.StorageKeyValidator = ticketattachmentDescStorageKey.Validators[0].(func(string) error)
+	// ticketattachmentDescInline is the schema descriptor for inline field.
+	ticketattachmentDescInline := ticketattachmentFields[7].Descriptor()
+	// ticketattachment.DefaultInline holds the default value on creation for the inline field.
+	ticketattachment.DefaultInline = ticketattachmentDescInline.Default.(bool)
+	// ticketattachmentDescID is the schema descriptor for id field.
+	ticketattachmentDescID := ticketattachmentFields[0].Descriptor()
+	// ticketattachment.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	ticketattachment.IDValidator = ticketattachmentDescID.Validators[0].(func(string) error)
 	ticketcommentMixin := schema.TicketComment{}.Mixin()
 	ticketcomment.Policy = privacy.NewPolicies(ticketcommentMixin[1], schema.TicketComment{})
 	ticketcomment.Hooks[0] = func(next ent.Mutator) ent.Mutator {

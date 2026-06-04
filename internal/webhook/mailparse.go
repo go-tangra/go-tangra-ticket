@@ -21,14 +21,27 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
+// maxAttachmentBytes caps a single decoded attachment.
+const maxAttachmentBytes = 25 << 20 // 25 MiB
+
+// mailAttachment is a decoded file part of an email.
+type mailAttachment struct {
+	filename    string
+	contentType string
+	contentID   string
+	inline      bool
+	data        []byte
+}
+
 // parsedMail holds the extracted, decoded fields of an inbound email.
 type parsedMail struct {
-	subject   string
-	fromName  string
-	fromEmail string
-	messageID string
-	text      string // plain text (text/plain preferred, else HTML->text)
-	html      string // raw HTML body, if the email had one
+	subject     string
+	fromName    string
+	fromEmail   string
+	messageID   string
+	text        string // plain text (text/plain preferred, else HTML->text)
+	html        string // raw HTML body, if the email had one
+	attachments []mailAttachment
 }
 
 // parseMail parses a raw RFC822 message into ticket fields, decoding MIME
@@ -71,12 +84,15 @@ func parseMail(raw []byte) parsedMail {
 		}
 	}
 
+	var atts []mailAttachment
+	addAtt := func(a mailAttachment) { atts = append(atts, a) }
+
 	ct := msg.Header.Get("Content-Type")
 	if ct == "" {
 		b, _ := io.ReadAll(io.LimitReader(msg.Body, maxBodyBytes))
 		text = string(b)
 	} else if mediaType, params, e := mime.ParseMediaType(ct); e == nil && strings.HasPrefix(mediaType, "multipart/") {
-		walkParts(multipart.NewReader(msg.Body, params["boundary"]), mediaType, 0, collect)
+		walkParts(multipart.NewReader(msg.Body, params["boundary"]), mediaType, 0, collect, addAtt)
 	} else if e == nil {
 		b, _ := io.ReadAll(io.LimitReader(msg.Body, maxBodyBytes))
 		collect(mediaType, msg.Header.Get("Content-Transfer-Encoding"), params["charset"], mediaType, b)
@@ -85,6 +101,7 @@ func parseMail(raw []byte) parsedMail {
 		text = string(b)
 	}
 
+	out.attachments = atts
 	out.html = htmlBody
 	if strings.TrimSpace(text) != "" {
 		out.text = strings.TrimSpace(text)
@@ -94,10 +111,12 @@ func parseMail(raw []byte) parsedMail {
 	return out
 }
 
-// walkParts recursively walks a multipart reader, collecting text parts and
-// skipping attachments. Depth is bounded to defend against pathological nesting.
-func walkParts(mr *multipart.Reader, parentType string, depth int, collect func(mediaType, enc, charset, parentType string, content []byte)) {
-	if depth > 10 {
+// walkParts recursively walks a multipart reader, collecting text parts as
+// body and file parts as attachments (decoded). Logic ported from
+// go-imap-admin: disposition + filename (MIME-decoded) determine attachments;
+// Content-ID + inline disposition mark inline content. Depth is bounded.
+func walkParts(mr *multipart.Reader, parentType string, depth int, collect func(mediaType, enc, charset, parentType string, content []byte), att func(mailAttachment)) {
+	if depth > 12 {
 		return
 	}
 	for {
@@ -110,22 +129,37 @@ func walkParts(mr *multipart.Reader, parentType string, depth int, collect func(
 			_, _ = io.Copy(io.Discard, part)
 			continue
 		}
+
 		disp, dparams, _ := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
 		filename := dparams["filename"]
 		if filename == "" {
 			filename = params["name"]
 		}
-		// Skip attachments / inline files — the ticket body is text only.
-		if disp == "attachment" || filename != "" {
-			_, _ = io.Copy(io.Discard, part)
+		filename = decodeHeaderWord(filename)
+		contentID := strings.Trim(part.Header.Get("Content-ID"), "<>")
+		isAttachment := disp == "attachment" || filename != ""
+		isInline := disp == "inline" && contentID != ""
+
+		if isAttachment || isInline {
+			content, _ := io.ReadAll(io.LimitReader(part, maxAttachmentBytes))
+			data := decodeTransfer(content, part.Header.Get("Content-Transfer-Encoding"))
+			att(mailAttachment{
+				filename:    filename,
+				contentType: mediaType,
+				contentID:   contentID,
+				inline:      isInline && !isAttachment,
+				data:        data,
+			})
 			continue
 		}
+
 		if strings.HasPrefix(mediaType, "multipart/") {
 			if b := params["boundary"]; b != "" {
-				walkParts(multipart.NewReader(part, b), mediaType, depth+1, collect)
+				walkParts(multipart.NewReader(part, b), mediaType, depth+1, collect, att)
 			}
 			continue
 		}
+
 		if strings.HasPrefix(mediaType, "text/") {
 			content, _ := io.ReadAll(io.LimitReader(part, maxBodyBytes))
 			collect(mediaType, part.Header.Get("Content-Transfer-Encoding"), params["charset"], parentType, content)
@@ -133,6 +167,16 @@ func walkParts(mr *multipart.Reader, parentType string, depth int, collect func(
 			_, _ = io.Copy(io.Discard, part)
 		}
 	}
+}
+
+func decodeHeaderWord(s string) string {
+	if s == "" {
+		return s
+	}
+	if d, err := wordDecoder().DecodeHeader(strings.Trim(s, `" `)); err == nil {
+		return d
+	}
+	return s
 }
 
 func decodeTransfer(content []byte, enc string) []byte {

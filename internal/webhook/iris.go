@@ -3,14 +3,18 @@
 package webhook
 
 import (
+	"context"
 	"crypto/subtle"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/uuid"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 
 	"github.com/go-tangra/go-tangra-common/viewer"
@@ -26,12 +30,14 @@ const maxBodyBytes = 10 << 20 // 10 MiB
 type IrisHandler struct {
 	log      *log.Helper
 	repo     *data.TicketRepo
+	attach   *data.AttachmentRepo
+	storage  *data.StorageClient
 	metrics  *metrics.Collector
 	token    string
 	tenantID uint32
 }
 
-func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, m *metrics.Collector) *IrisHandler {
+func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, attach *data.AttachmentRepo, storage *data.StorageClient, m *metrics.Collector) *IrisHandler {
 	tid := uint32(0)
 	if v := os.Getenv("TICKET_DEFAULT_TENANT"); v != "" {
 		if n, err := strconv.ParseUint(v, 10, 32); err == nil {
@@ -41,6 +47,8 @@ func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, m *metrics.Co
 	h := &IrisHandler{
 		log:      ctx.NewLoggerHelper("ticket/webhook/iris"),
 		repo:     repo,
+		attach:   attach,
+		storage:  storage,
 		metrics:  m,
 		token:    os.Getenv("TICKET_WEBHOOK_TOKEN"),
 		tenantID: tid,
@@ -130,8 +138,43 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	if h.metrics != nil {
 		h.metrics.TicketCreated(e.Status)
 	}
-	h.log.Infof("iris webhook: created ticket %s from %q (subject=%q)", e.ID, fromEmail, subject)
+
+	h.storeAttachments(ctx, e.ID, pm.attachments)
+
+	h.log.Infof("iris webhook: created ticket %s from %q (subject=%q, attachments=%d)", e.ID, fromEmail, subject, len(pm.attachments))
 	writeOK(w)
+}
+
+// storeAttachments uploads each decoded attachment to S3 and records it.
+// Best-effort: a failed attachment is logged and skipped, never failing the
+// ticket. No-op when storage is not configured.
+func (h *IrisHandler) storeAttachments(ctx context.Context, ticketID string, atts []mailAttachment) {
+	if h.storage == nil || h.attach == nil || len(atts) == 0 {
+		return
+	}
+	for _, a := range atts {
+		name := a.filename
+		if name == "" {
+			name = "attachment"
+		}
+		key := fmt.Sprintf("tickets/%s/%s/%s", ticketID, uuid.NewString(), path.Base(name))
+		if err := h.storage.Upload(ctx, key, a.contentType, a.data); err != nil {
+			h.log.Warnf("iris webhook: upload attachment %q failed: %v", name, err)
+			continue
+		}
+		if _, err := h.attach.Create(ctx, data.NewAttachment{
+			TenantID:    h.tenantID,
+			TicketID:    ticketID,
+			Filename:    name,
+			ContentType: a.contentType,
+			Size:        int64(len(a.data)),
+			StorageKey:  key,
+			ContentID:   a.contentID,
+			Inline:      a.inline,
+		}); err != nil {
+			h.log.Warnf("iris webhook: record attachment %q failed: %v", name, err)
+		}
+	}
 }
 
 func writeOK(w http.ResponseWriter) {

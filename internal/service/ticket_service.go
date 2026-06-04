@@ -17,13 +17,15 @@ type TicketService struct {
 
 	log     *log.Helper
 	repo    *data.TicketRepo
+	attach  *data.AttachmentRepo
 	metrics *metrics.Collector
 }
 
-func NewTicketService(ctx *bootstrap.Context, repo *data.TicketRepo, m *metrics.Collector) *TicketService {
+func NewTicketService(ctx *bootstrap.Context, repo *data.TicketRepo, attach *data.AttachmentRepo, m *metrics.Collector) *TicketService {
 	return &TicketService{
 		log:     ctx.NewLoggerHelper("ticket/service/ticket"),
 		repo:    repo,
+		attach:  attach,
 		metrics: m,
 	}
 }
@@ -63,7 +65,15 @@ func (s *TicketService) GetTicket(ctx context.Context, req *ticketpb.GetTicketRe
 		return nil, ticketpb.ErrorTicketNotFound("ticket not found")
 	}
 	cc := int32(s.repo.CountComments(ctx, e.ID))
-	return &ticketpb.GetTicketResponse{Ticket: ticketToProto(e, cc, "")}, nil
+	t := ticketToProto(e, cc, "")
+	if s.attach != nil {
+		if rows, aerr := s.attach.ListByTicket(ctx, tenantID, e.ID); aerr == nil {
+			for _, a := range rows {
+				t.Attachments = append(t.Attachments, attachmentToProto(a))
+			}
+		}
+	}
+	return &ticketpb.GetTicketResponse{Ticket: t}, nil
 }
 
 func (s *TicketService) ListTickets(ctx context.Context, req *ticketpb.ListTicketsRequest) (*ticketpb.ListTicketsResponse, error) {

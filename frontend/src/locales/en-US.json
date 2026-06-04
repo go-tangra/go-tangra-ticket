@@ -17,6 +17,7 @@
       "detail": "Ticket Detail",
       "assign": "Assign",
       "changeStatus": "Change Status",
+      "attachments": "Attachments",
       "comments": "Comments",
       "addComment": "Add Comment",
       "internalNote": "Internal note",

@@ -14,6 +14,8 @@ type Tx struct {
 	config
 	// Ticket is the client for interacting with the Ticket builders.
 	Ticket *TicketClient
+	// TicketAttachment is the client for interacting with the TicketAttachment builders.
+	TicketAttachment *TicketAttachmentClient
 	// TicketComment is the client for interacting with the TicketComment builders.
 	TicketComment *TicketCommentClient
 
@@ -148,6 +150,7 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Ticket = NewTicketClient(tx.config)
+	tx.TicketAttachment = NewTicketAttachmentClient(tx.config)
 	tx.TicketComment = NewTicketCommentClient(tx.config)
 }
 

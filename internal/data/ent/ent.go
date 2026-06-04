@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketattachment"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
 )
 
@@ -74,8 +75,9 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			ticket.Table:        ticket.ValidColumn,
-			ticketcomment.Table: ticketcomment.ValidColumn,
+			ticket.Table:           ticket.ValidColumn,
+			ticketattachment.Table: ticketattachment.ValidColumn,
+			ticketcomment.Table:    ticketcomment.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

@@ -66,6 +66,24 @@ func ticketToProto(e *ent.Ticket, commentCount int32, assigneeName string) *tick
 	}
 }
 
+func attachmentToProto(e *ent.TicketAttachment) *ticketpb.TicketAttachment {
+	if e == nil {
+		return nil
+	}
+	return &ticketpb.TicketAttachment{
+		Id:          e.ID,
+		TicketId:    e.TicketID,
+		Filename:    e.Filename,
+		ContentType: e.ContentType,
+		Size:        e.Size,
+		ContentId:   e.ContentID,
+		Inline:      e.Inline,
+		// Path served by the module HTTP server via the admin gateway proxy.
+		DownloadUrl: "/modules/ticket/attachments/" + e.ID,
+		CreateTime:  ts(e.CreateTime),
+	}
+}
+
 func commentToProto(e *ent.TicketComment, authorName string) *ticketpb.TicketComment {
 	if e == nil {
 		return nil

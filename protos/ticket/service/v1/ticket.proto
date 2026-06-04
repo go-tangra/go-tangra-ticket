@@ -56,6 +56,23 @@ message Ticket {
   uint32 create_by = 15 [json_name = "createBy"];
   google.protobuf.Timestamp create_time = 16 [json_name = "createTime"];
   google.protobuf.Timestamp update_time = 17 [json_name = "updateTime"];
+  // attachments are populated on GetTicket only (not in list responses).
+  repeated TicketAttachment attachments = 19 [json_name = "attachments"];
+}
+
+// TicketAttachment is a file extracted from the inbound email, stored in
+// S3/RustFS. Download via download_url (served by the module HTTP server
+// through the admin gateway).
+message TicketAttachment {
+  string id = 1 [json_name = "id"];
+  string ticket_id = 2 [json_name = "ticketId"];
+  string filename = 3 [json_name = "filename"];
+  string content_type = 4 [json_name = "contentType"];
+  int64 size = 5 [json_name = "size"];
+  string content_id = 6 [json_name = "contentId"];
+  bool inline = 7 [json_name = "inline"];
+  string download_url = 8 [json_name = "downloadUrl"];
+  google.protobuf.Timestamp create_time = 9 [json_name = "createTime"];
 }
 
 service TicketService {

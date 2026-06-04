@@ -57,6 +57,39 @@ var (
 			},
 		},
 	}
+	// TicketAttachmentsColumns holds the columns for the "ticket_attachments" table.
+	TicketAttachmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, Comment: "UUID primary key"},
+		{Name: "create_time", Type: field.TypeTime, Nullable: true, Comment: "创建时间"},
+		{Name: "update_time", Type: field.TypeTime, Nullable: true, Comment: "更新时间"},
+		{Name: "delete_time", Type: field.TypeTime, Nullable: true, Comment: "删除时间"},
+		{Name: "tenant_id", Type: field.TypeUint32, Nullable: true, Comment: "租户ID", Default: 0},
+		{Name: "ticket_id", Type: field.TypeString, Comment: "Owning ticket UUID"},
+		{Name: "filename", Type: field.TypeString, Nullable: true},
+		{Name: "content_type", Type: field.TypeString, Nullable: true},
+		{Name: "size", Type: field.TypeInt64, Default: 0},
+		{Name: "storage_key", Type: field.TypeString, Comment: "Object key in S3/RustFS"},
+		{Name: "content_id", Type: field.TypeString, Nullable: true, Comment: "MIME Content-ID for inline images"},
+		{Name: "inline", Type: field.TypeBool, Default: false},
+	}
+	// TicketAttachmentsTable holds the schema information for the "ticket_attachments" table.
+	TicketAttachmentsTable = &schema.Table{
+		Name:       "ticket_attachments",
+		Columns:    TicketAttachmentsColumns,
+		PrimaryKey: []*schema.Column{TicketAttachmentsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ticketattachment_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{TicketAttachmentsColumns[4]},
+			},
+			{
+				Name:    "ticketattachment_ticket_id",
+				Unique:  false,
+				Columns: []*schema.Column{TicketAttachmentsColumns[5]},
+			},
+		},
+	}
 	// TicketCommentsColumns holds the columns for the "ticket_comments" table.
 	TicketCommentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, Comment: "UUID primary key"},
@@ -99,6 +132,7 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		TicketTicketsTable,
+		TicketAttachmentsTable,
 		TicketCommentsTable,
 	}
 )
@@ -106,6 +140,9 @@ var (
 func init() {
 	TicketTicketsTable.Annotation = &entsql.Annotation{
 		Table: "ticket_tickets",
+	}
+	TicketAttachmentsTable.Annotation = &entsql.Annotation{
+		Table: "ticket_attachments",
 	}
 	TicketCommentsTable.ForeignKeys[0].RefTable = TicketTicketsTable
 	TicketCommentsTable.Annotation = &entsql.Annotation{

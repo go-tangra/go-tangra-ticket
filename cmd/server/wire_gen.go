@@ -30,8 +30,9 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	ticketRepo := data.NewTicketRepo(context, entClient)
+	attachmentRepo := data.NewAttachmentRepo(context, entClient)
 	collector := metrics.NewCollector(context)
-	ticketService := service.NewTicketService(context, ticketRepo, collector)
+	ticketService := service.NewTicketService(context, ticketRepo, attachmentRepo, collector)
 	commentRepo := data.NewCommentRepo(context, entClient)
 	commentService := service.NewCommentService(context, commentRepo, ticketRepo)
 	adminClient, cleanup2, err := client.NewAdminClient(context, certManager)
@@ -41,16 +42,24 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 	}
 	userService := service.NewUserService(context, adminClient)
 	grpcServer := server.NewGRPCServer(context, certManager, ticketService, commentService, userService)
-	irisHandler := webhook.NewIrisHandler(context, ticketRepo, collector)
-	httpServer := server.NewHTTPServer(context, irisHandler)
+	storageClient, cleanup3, err := data.NewStorageClient(context)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	irisHandler := webhook.NewIrisHandler(context, ticketRepo, attachmentRepo, storageClient, collector)
+	httpServer := server.NewHTTPServer(context, irisHandler, attachmentRepo, storageClient)
 	registrationClient, err := data.NewRegistrationClient(context)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	app := newApp(context, grpcServer, httpServer, registrationClient)
 	return app, func() {
+		cleanup3()
 		cleanup2()
 		cleanup()
 	}, nil

@@ -146,6 +146,40 @@ func (m *Ticket) validate(all bool) error {
 		}
 	}
 
+	for idx, item := range m.GetAttachments() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, TicketValidationError{
+						field:  fmt.Sprintf("Attachments[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, TicketValidationError{
+						field:  fmt.Sprintf("Attachments[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return TicketValidationError{
+					field:  fmt.Sprintf("Attachments[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
 	if len(errors) > 0 {
 		return TicketMultiError(errors)
 	}
@@ -222,6 +256,151 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = TicketValidationError{}
+
+// Validate checks the field values on TicketAttachment with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *TicketAttachment) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on TicketAttachment with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// TicketAttachmentMultiError, or nil if none found.
+func (m *TicketAttachment) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *TicketAttachment) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	// no validation rules for TicketId
+
+	// no validation rules for Filename
+
+	// no validation rules for ContentType
+
+	// no validation rules for Size
+
+	// no validation rules for ContentId
+
+	// no validation rules for Inline
+
+	// no validation rules for DownloadUrl
+
+	if all {
+		switch v := interface{}(m.GetCreateTime()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, TicketAttachmentValidationError{
+					field:  "CreateTime",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, TicketAttachmentValidationError{
+					field:  "CreateTime",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCreateTime()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return TicketAttachmentValidationError{
+				field:  "CreateTime",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return TicketAttachmentMultiError(errors)
+	}
+
+	return nil
+}
+
+// TicketAttachmentMultiError is an error wrapping multiple validation errors
+// returned by TicketAttachment.ValidateAll() if the designated constraints
+// aren't met.
+type TicketAttachmentMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m TicketAttachmentMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m TicketAttachmentMultiError) AllErrors() []error { return m }
+
+// TicketAttachmentValidationError is the validation error returned by
+// TicketAttachment.Validate if the designated constraints aren't met.
+type TicketAttachmentValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e TicketAttachmentValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e TicketAttachmentValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e TicketAttachmentValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e TicketAttachmentValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e TicketAttachmentValidationError) ErrorName() string { return "TicketAttachmentValidationError" }
+
+// Error satisfies the builtin error interface
+func (e TicketAttachmentValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sTicketAttachment.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = TicketAttachmentValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = TicketAttachmentValidationError{}
 
 // Validate checks the field values on CreateTicketRequest with the rules
 // defined in the proto definition for this message. If any rules are

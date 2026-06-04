@@ -53,6 +53,13 @@ function close() {
   emit('update:open', false);
 }
 
+function formatSize(bytes?: number): string {
+  const n = bytes ?? 0;
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 async function loadAll() {
   if (!props.ticketId) return;
   loading.value = true;
@@ -180,6 +187,27 @@ const assigneeOptions = () => [
             :html-content="ticket.bodyHtml"
             :text-content="ticket.description"
           />
+        </div>
+
+        <div
+          v-if="ticket.attachments && ticket.attachments.length"
+          style="margin-bottom: 16px"
+        >
+          <h3 style="font-weight: 600; margin-bottom: 8px">
+            {{ $t('ticket.page.ticket.attachments') }} ({{ ticket.attachments.length }})
+          </h3>
+          <div
+            v-for="a in ticket.attachments"
+            :key="a.id"
+            style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px"
+          >
+            <span>📎</span>
+            <a :href="a.downloadUrl" target="_blank" rel="noopener noreferrer">
+              {{ a.filename || 'attachment' }}
+            </a>
+            <span style="color: #888; font-size: 12px">{{ formatSize(a.size) }}</span>
+            <Tag v-if="a.inline" color="blue" style="margin-left: 4px">inline</Tag>
+          </div>
         </div>
 
         <Divider style="margin: 12px 0" />

@@ -16,6 +16,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticket"
+	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketattachment"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent/ticketcomment"
 )
 
@@ -26,6 +27,8 @@ type Client struct {
 	Schema *migrate.Schema
 	// Ticket is the client for interacting with the Ticket builders.
 	Ticket *TicketClient
+	// TicketAttachment is the client for interacting with the TicketAttachment builders.
+	TicketAttachment *TicketAttachmentClient
 	// TicketComment is the client for interacting with the TicketComment builders.
 	TicketComment *TicketCommentClient
 }
@@ -40,6 +43,7 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Ticket = NewTicketClient(c.config)
+	c.TicketAttachment = NewTicketAttachmentClient(c.config)
 	c.TicketComment = NewTicketCommentClient(c.config)
 }
 
@@ -131,10 +135,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		Ticket:        NewTicketClient(cfg),
-		TicketComment: NewTicketCommentClient(cfg),
+		ctx:              ctx,
+		config:           cfg,
+		Ticket:           NewTicketClient(cfg),
+		TicketAttachment: NewTicketAttachmentClient(cfg),
+		TicketComment:    NewTicketCommentClient(cfg),
 	}, nil
 }
 
@@ -152,10 +157,11 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		Ticket:        NewTicketClient(cfg),
-		TicketComment: NewTicketCommentClient(cfg),
+		ctx:              ctx,
+		config:           cfg,
+		Ticket:           NewTicketClient(cfg),
+		TicketAttachment: NewTicketAttachmentClient(cfg),
+		TicketComment:    NewTicketCommentClient(cfg),
 	}, nil
 }
 
@@ -185,6 +191,7 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	c.Ticket.Use(hooks...)
+	c.TicketAttachment.Use(hooks...)
 	c.TicketComment.Use(hooks...)
 }
 
@@ -192,6 +199,7 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	c.Ticket.Intercept(interceptors...)
+	c.TicketAttachment.Intercept(interceptors...)
 	c.TicketComment.Intercept(interceptors...)
 }
 
@@ -200,6 +208,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *TicketMutation:
 		return c.Ticket.mutate(ctx, m)
+	case *TicketAttachmentMutation:
+		return c.TicketAttachment.mutate(ctx, m)
 	case *TicketCommentMutation:
 		return c.TicketComment.mutate(ctx, m)
 	default:
@@ -357,6 +367,140 @@ func (c *TicketClient) mutate(ctx context.Context, m *TicketMutation) (Value, er
 	}
 }
 
+// TicketAttachmentClient is a client for the TicketAttachment schema.
+type TicketAttachmentClient struct {
+	config
+}
+
+// NewTicketAttachmentClient returns a client for the TicketAttachment from the given config.
+func NewTicketAttachmentClient(c config) *TicketAttachmentClient {
+	return &TicketAttachmentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ticketattachment.Hooks(f(g(h())))`.
+func (c *TicketAttachmentClient) Use(hooks ...Hook) {
+	c.hooks.TicketAttachment = append(c.hooks.TicketAttachment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ticketattachment.Intercept(f(g(h())))`.
+func (c *TicketAttachmentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TicketAttachment = append(c.inters.TicketAttachment, interceptors...)
+}
+
+// Create returns a builder for creating a TicketAttachment entity.
+func (c *TicketAttachmentClient) Create() *TicketAttachmentCreate {
+	mutation := newTicketAttachmentMutation(c.config, OpCreate)
+	return &TicketAttachmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TicketAttachment entities.
+func (c *TicketAttachmentClient) CreateBulk(builders ...*TicketAttachmentCreate) *TicketAttachmentCreateBulk {
+	return &TicketAttachmentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TicketAttachmentClient) MapCreateBulk(slice any, setFunc func(*TicketAttachmentCreate, int)) *TicketAttachmentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TicketAttachmentCreateBulk{err: fmt.Errorf("calling to TicketAttachmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TicketAttachmentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TicketAttachmentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TicketAttachment.
+func (c *TicketAttachmentClient) Update() *TicketAttachmentUpdate {
+	mutation := newTicketAttachmentMutation(c.config, OpUpdate)
+	return &TicketAttachmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TicketAttachmentClient) UpdateOne(_m *TicketAttachment) *TicketAttachmentUpdateOne {
+	mutation := newTicketAttachmentMutation(c.config, OpUpdateOne, withTicketAttachment(_m))
+	return &TicketAttachmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TicketAttachmentClient) UpdateOneID(id string) *TicketAttachmentUpdateOne {
+	mutation := newTicketAttachmentMutation(c.config, OpUpdateOne, withTicketAttachmentID(id))
+	return &TicketAttachmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TicketAttachment.
+func (c *TicketAttachmentClient) Delete() *TicketAttachmentDelete {
+	mutation := newTicketAttachmentMutation(c.config, OpDelete)
+	return &TicketAttachmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TicketAttachmentClient) DeleteOne(_m *TicketAttachment) *TicketAttachmentDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TicketAttachmentClient) DeleteOneID(id string) *TicketAttachmentDeleteOne {
+	builder := c.Delete().Where(ticketattachment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TicketAttachmentDeleteOne{builder}
+}
+
+// Query returns a query builder for TicketAttachment.
+func (c *TicketAttachmentClient) Query() *TicketAttachmentQuery {
+	return &TicketAttachmentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTicketAttachment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TicketAttachment entity by its id.
+func (c *TicketAttachmentClient) Get(ctx context.Context, id string) (*TicketAttachment, error) {
+	return c.Query().Where(ticketattachment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TicketAttachmentClient) GetX(ctx context.Context, id string) *TicketAttachment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *TicketAttachmentClient) Hooks() []Hook {
+	hooks := c.hooks.TicketAttachment
+	return append(hooks[:len(hooks):len(hooks)], ticketattachment.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *TicketAttachmentClient) Interceptors() []Interceptor {
+	return c.inters.TicketAttachment
+}
+
+func (c *TicketAttachmentClient) mutate(ctx context.Context, m *TicketAttachmentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TicketAttachmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TicketAttachmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TicketAttachmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TicketAttachmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TicketAttachment mutation op: %q", m.Op())
+	}
+}
+
 // TicketCommentClient is a client for the TicketComment schema.
 type TicketCommentClient struct {
 	config
@@ -510,9 +654,9 @@ func (c *TicketCommentClient) mutate(ctx context.Context, m *TicketCommentMutati
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Ticket, TicketComment []ent.Hook
+		Ticket, TicketAttachment, TicketComment []ent.Hook
 	}
 	inters struct {
-		Ticket, TicketComment []ent.Interceptor
+		Ticket, TicketAttachment, TicketComment []ent.Interceptor
 	}
 )

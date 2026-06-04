@@ -9,5 +9,8 @@ import (
 // Ticket is the predicate function for ticket builders.
 type Ticket func(*sql.Selector)
 
+// TicketAttachment is the predicate function for ticketattachment builders.
+type TicketAttachment func(*sql.Selector)
+
 // TicketComment is the predicate function for ticketcomment builders.
 type TicketComment func(*sql.Selector)

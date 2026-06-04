@@ -181,6 +181,23 @@ export type Ticket = {
   createBy: number | undefined;
   createTime: wellKnownTimestamp | undefined;
   updateTime: wellKnownTimestamp | undefined;
+  // attachments are populated on GetTicket only (not in list responses).
+  attachments: TicketAttachment[] | undefined;
+};
+
+// TicketAttachment is a file extracted from the inbound email, stored in
+// S3/RustFS. Download via download_url (served by the module HTTP server
+// through the admin gateway).
+export type TicketAttachment = {
+  id: string | undefined;
+  ticketId: string | undefined;
+  filename: string | undefined;
+  contentType: string | undefined;
+  size: number | undefined;
+  contentId: string | undefined;
+  inline: boolean | undefined;
+  downloadUrl: string | undefined;
+  createTime: wellKnownTimestamp | undefined;
 };
 
 export type CreateTicketRequest = {
