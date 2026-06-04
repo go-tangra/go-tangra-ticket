@@ -1,5 +1,22 @@
 ##################################
-# Stage 0: Build frontend module
+# Stage 0: Generate the TypeScript API client from protos
+##################################
+
+FROM golang:1.25-alpine AS ts-codegen
+ENV GOTOOLCHAIN=auto
+RUN apk add --no-cache curl git
+RUN curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /usr/local/bin/buf && \
+    chmod +x /usr/local/bin/buf
+# Pinned generator (NOT @latest): @latest drifted to a ClientTransport API
+# that breaks the fetch handler in frontend/src/api/client.ts.
+RUN GOBIN=/usr/local/bin go install github.com/go-kratos/protoc-gen-typescript-http@v0.0.0-20260525125049-694cf6cd0529
+WORKDIR /src
+COPY buf.typescript.gen.yaml buf.yaml buf.lock ./
+COPY protos/ protos/
+RUN buf generate --template buf.typescript.gen.yaml
+
+##################################
+# Stage 1: Build frontend module
 ##################################
 
 FROM node:20-alpine AS frontend-builder
@@ -8,6 +25,7 @@ WORKDIR /frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY frontend/ .
+COPY --from=ts-codegen /src/frontend/src/generated/ src/generated/
 RUN pnpm build
 
 ##################################

@@ -17,6 +17,12 @@ api:
 	@buf generate
 	@buf build -o cmd/server/assets/descriptor.bin
 
+.PHONY: ts-client
+ts-client:
+	@# Generate the frontend TS client with the PINNED generator (NOT @latest).
+	@GOBIN=$$(pwd)/bin go install github.com/go-kratos/protoc-gen-typescript-http@v0.0.0-20260525125049-694cf6cd0529
+	@PATH="$$(pwd)/bin:$$PATH" buf generate --template buf.typescript.gen.yaml
+
 .PHONY: ent
 ent:
 	@# NOTE: the ent CLI (v0.14.5) is incompatible with newer tablewriter.

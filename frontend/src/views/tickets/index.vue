@@ -18,7 +18,7 @@ import type {
   Ticket,
   TicketPriority,
   TicketStatus,
-} from '../../api/services';
+} from '../../api/client';
 import { useTicketStore } from '../../stores/ticket.state';
 import {
   humanizeEnum,

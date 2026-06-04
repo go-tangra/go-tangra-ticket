@@ -50,6 +50,14 @@ jobs:
         with:
           github_token: ${{ github.token }}
 
+      # Pinned generator (NOT @latest): @latest drifted to a ClientTransport
+      # API that breaks the fetch handler in frontend/src/api/client.ts.
+      - name: Install protoc-gen-typescript-http
+        run: go install github.com/go-kratos/protoc-gen-typescript-http@v0.0.0-20260525125049-694cf6cd0529
+
+      - name: Generate TypeScript API client
+        run: buf generate --template buf.typescript.gen.yaml
+
       - name: Build frontend
         working-directory: frontend
         run: |

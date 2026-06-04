@@ -1,4 +1,4 @@
-import type { TicketPriority, TicketStatus } from '../../api/services';
+import type { TicketPriority, TicketStatus } from '../../api/client';
 
 // "TICKET_STATUS_IN_PROGRESS" -> "In Progress"
 export function humanizeEnum(v?: string): string {
@@ -10,7 +10,7 @@ export function humanizeEnum(v?: string): string {
     .join(' ');
 }
 
-export function statusColor(s: TicketStatus): string {
+export function statusColor(s?: TicketStatus): string {
   switch (s) {
     case 'TICKET_STATUS_OPEN':
       return 'blue';
@@ -27,7 +27,7 @@ export function statusColor(s: TicketStatus): string {
   }
 }
 
-export function priorityColor(p: TicketPriority): string {
+export function priorityColor(p?: TicketPriority): string {
   switch (p) {
     case 'TICKET_PRIORITY_URGENT':
       return 'red';

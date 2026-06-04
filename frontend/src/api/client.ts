@@ -1,41 +1,58 @@
 import { useAccessStore } from 'shell/vben/stores';
 
-const MODULE_BASE_URL = '/admin/v1/modules/ticket/v1';
+import {
+  createTicketCommentServiceClient,
+  createTicketServiceClient,
+  createTicketUserServiceClient,
+} from '../generated/api/ticket/service/v1';
 
-function authHeaders(): Record<string, string> {
+// The admin gateway mounts the module under this prefix; the generated
+// client supplies the per-RPC path (e.g. "v1/tickets").
+const MODULE_BASE_URL = '/admin/v1/modules/ticket';
+
+type RequestType = { path: string; method: string; body: string | null };
+
+async function handler(req: RequestType): Promise<unknown> {
   const accessStore = useAccessStore();
   const token = (accessStore as any).accessToken;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${MODULE_BASE_URL}${path}`, {
-    method,
+  const response = await fetch(`${MODULE_BASE_URL}/${req.path}`, {
+    method: req.method,
     headers: {
       'Content-Type': 'application/json',
-      ...authHeaders(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: req.body,
   });
+
   if (!response.ok) {
     let message = `HTTP error! status: ${response.status}`;
     try {
-      const err = await response.json();
-      if (err?.message) message = err.message;
+      const errorBody = await response.json();
+      if (errorBody?.message) message = errorBody.message;
     } catch {
-      // ignore non-JSON error bodies
+      // non-JSON error body
     }
     throw new Error(message);
   }
+
   const text = await response.text();
-  return (text ? JSON.parse(text) : {}) as T;
+  return text ? JSON.parse(text) : {};
 }
 
-export const ticketApi = {
-  get: <T>(path: string) => request<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
-  delete: <T>(path: string) => request<T>('DELETE', path),
-};
+export const ticketService = createTicketServiceClient(handler);
+export const commentService = createTicketCommentServiceClient(handler);
+export const userService = createTicketUserServiceClient(handler);
 
-export default ticketApi;
+// Re-export generated types for convenience.
+export type {
+  Ticket,
+  TicketComment,
+  TicketStatus,
+  TicketPriority,
+  AssignableUser,
+  ListTicketsRequest,
+  ListTicketsResponse,
+  ListCommentsResponse,
+  ListAssignableUsersResponse,
+} from '../generated/api/ticket/service/v1';

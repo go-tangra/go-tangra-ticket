@@ -66,9 +66,13 @@ make wire     # wire DI
 make generate # all of the above
 ```
 
-The frontend uses a hand-written fetch client (`frontend/src/api/`), so there
-is **no `protoc-gen-typescript-http` / ts-codegen stage** (avoids the
-@latest-generator drift that bit hr/notification).
+The frontend uses a **generated** TypeScript client (`frontend/src/generated/`,
+from `buf.typescript.gen.yaml`) wrapped by a fetch `handler` in
+`frontend/src/api/client.ts`. The generator (`protoc-gen-typescript-http`) is
+**pinned** to `v0.0.0-20260525125049-694cf6cd0529` in both CI and the Dockerfile
+`ts-codegen` stage — do NOT use `@latest`: it drifted to a
+`ClientTransport`/`.unary` API that breaks the fetch handler (the bug that hit
+hr/notification). Regenerate with `make ts-client`.
 
 ## Conventions
 

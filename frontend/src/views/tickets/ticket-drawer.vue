@@ -20,7 +20,7 @@ import type {
   Ticket,
   TicketComment,
   TicketStatus,
-} from '../../api/services';
+} from '../../api/client';
 import { useTicketStore } from '../../stores/ticket.state';
 import { humanizeEnum, priorityColor, statusColor, statusOptions } from './helpers';
 

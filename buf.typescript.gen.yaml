@@ -1,0 +1,21 @@
+version: v2
+
+clean: true
+
+managed:
+  enabled: true
+
+  disable:
+    - module: buf.build/googleapis/googleapis
+    - module: 'buf.build/bufbuild/protovalidate'
+    - module: 'buf.build/kratos/apis'
+    - module: 'buf.build/menta2k-org/redact'
+
+inputs:
+  - directory: protos
+    paths:
+      - protos/ticket/service/v1
+
+plugins:
+  - local: protoc-gen-typescript-http
+    out: frontend/src/generated/api
