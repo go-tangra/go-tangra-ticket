@@ -50,12 +50,6 @@ jobs:
         with:
           github_token: ${{ github.token }}
 
-      - name: Install protoc-gen-typescript-http
-        run: go install github.com/go-kratos/protoc-gen-typescript-http@latest
-
-      - name: Generate TypeScript API client
-        run: buf generate --template buf.typescript.gen.yaml
-
       - name: Build frontend
         working-directory: frontend
         run: |
