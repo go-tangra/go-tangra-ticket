@@ -23,6 +23,7 @@ const (
 	TicketCommentService_CreateComment_FullMethodName = "/ticket.service.v1.TicketCommentService/CreateComment"
 	TicketCommentService_ListComments_FullMethodName  = "/ticket.service.v1.TicketCommentService/ListComments"
 	TicketCommentService_DeleteComment_FullMethodName = "/ticket.service.v1.TicketCommentService/DeleteComment"
+	TicketCommentService_ReplyTicket_FullMethodName   = "/ticket.service.v1.TicketCommentService/ReplyTicket"
 )
 
 // TicketCommentServiceClient is the client API for TicketCommentService service.
@@ -32,6 +33,9 @@ type TicketCommentServiceClient interface {
 	CreateComment(ctx context.Context, in *CreateCommentRequest, opts ...grpc.CallOption) (*CreateCommentResponse, error)
 	ListComments(ctx context.Context, in *ListCommentsRequest, opts ...grpc.CallOption) (*ListCommentsResponse, error)
 	DeleteComment(ctx context.Context, in *DeleteCommentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ReplyTicket posts a public reply AND emails it to the requester, stamping
+	// the threading headers so the requester's reply threads back onto the ticket.
+	ReplyTicket(ctx context.Context, in *ReplyTicketRequest, opts ...grpc.CallOption) (*ReplyTicketResponse, error)
 }
 
 type ticketCommentServiceClient struct {
@@ -72,6 +76,16 @@ func (c *ticketCommentServiceClient) DeleteComment(ctx context.Context, in *Dele
 	return out, nil
 }
 
+func (c *ticketCommentServiceClient) ReplyTicket(ctx context.Context, in *ReplyTicketRequest, opts ...grpc.CallOption) (*ReplyTicketResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplyTicketResponse)
+	err := c.cc.Invoke(ctx, TicketCommentService_ReplyTicket_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TicketCommentServiceServer is the server API for TicketCommentService service.
 // All implementations must embed UnimplementedTicketCommentServiceServer
 // for forward compatibility.
@@ -79,6 +93,9 @@ type TicketCommentServiceServer interface {
 	CreateComment(context.Context, *CreateCommentRequest) (*CreateCommentResponse, error)
 	ListComments(context.Context, *ListCommentsRequest) (*ListCommentsResponse, error)
 	DeleteComment(context.Context, *DeleteCommentRequest) (*emptypb.Empty, error)
+	// ReplyTicket posts a public reply AND emails it to the requester, stamping
+	// the threading headers so the requester's reply threads back onto the ticket.
+	ReplyTicket(context.Context, *ReplyTicketRequest) (*ReplyTicketResponse, error)
 	mustEmbedUnimplementedTicketCommentServiceServer()
 }
 
@@ -97,6 +114,9 @@ func (UnimplementedTicketCommentServiceServer) ListComments(context.Context, *Li
 }
 func (UnimplementedTicketCommentServiceServer) DeleteComment(context.Context, *DeleteCommentRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteComment not implemented")
+}
+func (UnimplementedTicketCommentServiceServer) ReplyTicket(context.Context, *ReplyTicketRequest) (*ReplyTicketResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReplyTicket not implemented")
 }
 func (UnimplementedTicketCommentServiceServer) mustEmbedUnimplementedTicketCommentServiceServer() {}
 func (UnimplementedTicketCommentServiceServer) testEmbeddedByValue()                              {}
@@ -173,6 +193,24 @@ func _TicketCommentService_DeleteComment_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TicketCommentService_ReplyTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplyTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketCommentServiceServer).ReplyTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TicketCommentService_ReplyTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketCommentServiceServer).ReplyTicket(ctx, req.(*ReplyTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TicketCommentService_ServiceDesc is the grpc.ServiceDesc for TicketCommentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -191,6 +229,10 @@ var TicketCommentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteComment",
 			Handler:    _TicketCommentService_DeleteComment_Handler,
+		},
+		{
+			MethodName: "ReplyTicket",
+			Handler:    _TicketCommentService_ReplyTicket_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

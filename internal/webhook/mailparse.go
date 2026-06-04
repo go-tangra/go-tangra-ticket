@@ -39,9 +39,24 @@ type parsedMail struct {
 	fromName    string
 	fromEmail   string
 	messageID   string
-	text        string // plain text (text/plain preferred, else HTML->text)
-	html        string // raw HTML body, if the email had one
+	inReplyTo   string   // In-Reply-To message-id (no angle brackets)
+	references  []string // References chain message-ids (no angle brackets)
+	text        string   // plain text (text/plain preferred, else HTML->text)
+	html        string   // raw HTML body, if the email had one
 	attachments []mailAttachment
+}
+
+// messageIDList splits a header value containing zero or more <id> tokens
+// into bare message-ids (angle brackets and whitespace stripped).
+func messageIDList(v string) []string {
+	fields := strings.Fields(v)
+	out := make([]string, 0, len(fields))
+	for _, f := range fields {
+		if id := strings.Trim(f, "<>"); id != "" {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 // parseMail parses a raw RFC822 message into ticket fields, decoding MIME
@@ -59,6 +74,8 @@ func parseMail(raw []byte) parsedMail {
 	dec := wordDecoder()
 	out.subject, _ = dec.DecodeHeader(msg.Header.Get("Subject"))
 	out.messageID = strings.Trim(msg.Header.Get("Message-Id"), "<>")
+	out.inReplyTo = strings.Trim(msg.Header.Get("In-Reply-To"), "<> \t")
+	out.references = messageIDList(msg.Header.Get("References"))
 	if addr, e := mail.ParseAddress(msg.Header.Get("From")); e == nil {
 		out.fromEmail = addr.Address
 		out.fromName, _ = dec.DecodeHeader(addr.Name)

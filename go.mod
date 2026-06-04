@@ -23,6 +23,7 @@ require (
 	github.com/tx7do/kratos-bootstrap/bootstrap v0.1.16
 	github.com/tx7do/kratos-bootstrap/cache/redis v0.1.1
 	github.com/tx7do/kratos-bootstrap/database/ent v0.1.3
+	github.com/wneessen/go-mail v0.7.3
 	golang.org/x/text v0.37.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260120221211-b8f7ae30c516
 	google.golang.org/grpc v1.78.0

@@ -32,6 +32,7 @@ type NewComment struct {
 	Internal    bool
 	AuthorID    uint32
 	AuthorEmail string
+	MessageID   string
 }
 
 func (r *CommentRepo) Create(ctx context.Context, c NewComment) (*ent.TicketComment, error) {
@@ -43,6 +44,7 @@ func (r *CommentRepo) Create(ctx context.Context, c NewComment) (*ent.TicketComm
 		SetInternal(c.Internal).
 		SetAuthorID(c.AuthorID).
 		SetAuthorEmail(c.AuthorEmail).
+		SetMessageID(c.MessageID).
 		SetCreateTime(time.Now()).
 		SetUpdateTime(time.Now()).
 		Save(ctx)
@@ -51,6 +53,48 @@ func (r *CommentRepo) Create(ctx context.Context, c NewComment) (*ent.TicketComm
 		return nil, err
 	}
 	return e, nil
+}
+
+// LastMessageID returns the message_id of the most recent comment in a ticket
+// that carries one (used to chain the In-Reply-To of an outbound reply).
+func (r *CommentRepo) LastMessageID(ctx context.Context, tenantID uint32, ticketID string) (string, error) {
+	e, err := r.entClient.Client().TicketComment.Query().
+		Where(
+			ticketcomment.TenantIDEQ(tenantID),
+			ticketcomment.TicketIDEQ(ticketID),
+			ticketcomment.MessageIDNEQ(""),
+		).
+		Order(ent.Desc(ticketcomment.FieldCreateTime)).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return e.MessageID, nil
+}
+
+// FindTicketIDByMessageIDs returns the ticket id of the most recent comment
+// whose message_id is in ids (used to thread an inbound reply onto its ticket).
+func (r *CommentRepo) FindTicketIDByMessageIDs(ctx context.Context, tenantID uint32, ids []string) (string, error) {
+	if len(ids) == 0 {
+		return "", nil
+	}
+	e, err := r.entClient.Client().TicketComment.Query().
+		Where(
+			ticketcomment.TenantIDEQ(tenantID),
+			ticketcomment.MessageIDIn(ids...),
+		).
+		Order(ent.Desc(ticketcomment.FieldCreateTime)).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return e.TicketID, nil
 }
 
 func (r *CommentRepo) ListByTicket(ctx context.Context, tenantID uint32, ticketID string) ([]*ent.TicketComment, error) {

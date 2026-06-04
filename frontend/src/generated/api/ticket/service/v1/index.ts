@@ -16,6 +16,9 @@ export type TicketComment = {
   // author_email is set when the comment came from an external requester reply.
   authorEmail: string | undefined;
   createTime: wellKnownTimestamp | undefined;
+  // message_id is the RFC822 Message-Id of the email this comment was sent or
+  // received as (empty for internal notes).
+  messageId: string | undefined;
 };
 
 // Encoded using RFC 3339, where generated output will always be Z-normalized
@@ -54,10 +57,26 @@ export type DeleteCommentRequest = {
   id: string | undefined;
 };
 
+export type ReplyTicketRequest = {
+  //
+  // Behaviors: REQUIRED
+  ticketId: string | undefined;
+  //
+  // Behaviors: REQUIRED
+  body: string | undefined;
+};
+
+export type ReplyTicketResponse = {
+  comment: TicketComment | undefined;
+};
+
 export interface TicketCommentService {
   CreateComment(request: CreateCommentRequest): Promise<CreateCommentResponse>;
   ListComments(request: ListCommentsRequest): Promise<ListCommentsResponse>;
   DeleteComment(request: DeleteCommentRequest): Promise<wellKnownEmpty>;
+  // ReplyTicket posts a public reply AND emails it to the requester, stamping
+  // the threading headers so the requester's reply threads back onto the ticket.
+  ReplyTicket(request: ReplyTicketRequest): Promise<ReplyTicketResponse>;
 }
 
 type RequestType = {
@@ -131,6 +150,26 @@ export function createTicketCommentServiceClient(
         service: "TicketCommentService",
         method: "DeleteComment",
       }) as Promise<wellKnownEmpty>;
+    },
+    ReplyTicket(request) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!request.ticketId) {
+        throw new Error("missing required field request.ticket_id");
+      }
+      const path = `v1/tickets/${request.ticketId}/reply`; // eslint-disable-line quotes
+      const body = JSON.stringify(request);
+      const queryParams: string[] = [];
+      let uri = path;
+      if (queryParams.length > 0) {
+        uri += `?${queryParams.join("&")}`
+      }
+      return handler({
+        path: uri,
+        method: "POST",
+        body,
+      }, {
+        service: "TicketCommentService",
+        method: "ReplyTicket",
+      }) as Promise<ReplyTicketResponse>;
     },
   };
 }

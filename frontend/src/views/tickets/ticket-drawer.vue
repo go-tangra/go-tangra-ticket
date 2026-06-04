@@ -3,10 +3,10 @@ import { ref, watch } from 'vue';
 
 import {
   Button,
-  Checkbox,
   Divider,
   Drawer,
   message as antMessage,
+  Segmented,
   Select,
   Spin,
   Tag,
@@ -55,7 +55,7 @@ const assignee = ref<number | undefined>(undefined);
 const status = ref<TicketStatus | undefined>(undefined);
 
 const newComment = ref('');
-const internal = ref(false);
+const mode = ref<'reply' | 'internal'>('reply');
 const posting = ref(false);
 
 function close() {
@@ -115,19 +115,47 @@ async function onStatus(value: TicketStatus) {
 
 async function postComment() {
   if (!newComment.value.trim()) return;
+  const isReply = mode.value === 'reply';
+  if (isReply && !ticket.value?.requesterEmail) {
+    antMessage.warning($t('ticket.page.ticket.noRequesterEmail'));
+    return;
+  }
   posting.value = true;
   try {
-    await store.addComment(props.ticketId, newComment.value.trim(), internal.value);
+    if (isReply) {
+      await store.replyTicket(props.ticketId, newComment.value.trim());
+    } else {
+      await store.addComment(props.ticketId, newComment.value.trim(), true);
+    }
     newComment.value = '';
-    internal.value = false;
+    ticket.value = await store.getTicket(props.ticketId);
     comments.value = await store.listComments(props.ticketId);
-    antMessage.success($t('ticket.page.ticket.commentSuccess'));
+    antMessage.success(
+      isReply
+        ? $t('ticket.page.ticket.replySuccess')
+        : $t('ticket.page.ticket.commentSuccess'),
+    );
+    emit('changed');
   } catch (e: any) {
     antMessage.error(e?.message ?? 'Comment failed');
   } finally {
     posting.value = false;
   }
 }
+
+// A comment that carries a message id and was written by an internal user is
+// an emailed reply; one with an author_email came in from the requester.
+function commentChannel(c: TicketComment): '' | 'in' | 'out' {
+  if (c.internal) return '';
+  if (c.authorEmail) return 'in';
+  if (c.messageId) return 'out';
+  return '';
+}
+
+const composerModeOptions = [
+  { label: $t('ticket.page.ticket.reply'), value: 'reply' },
+  { label: $t('ticket.page.ticket.internalNote'), value: 'internal' },
+];
 
 const assigneeOptions = () => [
   { value: 0, label: $t('ticket.page.ticket.unassigned') },
@@ -300,22 +328,53 @@ async function saveTags() {
             <div style="font-size: 12px; color: #888">
               <b>{{ c.authorName || c.authorEmail || ('#' + c.authorId) }}</b>
               · {{ c.createTime ? new Date(c.createTime).toLocaleString() : '' }}
-              <Tag v-if="c.internal" color="orange" style="margin-left: 6px">internal</Tag>
+              <Tag v-if="c.internal" color="orange" style="margin-left: 6px">
+                {{ $t('ticket.page.ticket.internalNote') }}
+              </Tag>
+              <Tag v-else-if="commentChannel(c) === 'out'" color="green" style="margin-left: 6px">
+                {{ $t('ticket.page.ticket.sentReply') }}
+              </Tag>
+              <Tag v-else-if="commentChannel(c) === 'in'" color="blue" style="margin-left: 6px">
+                {{ $t('ticket.page.ticket.incoming') }}
+              </Tag>
             </div>
             <div style="white-space: pre-wrap; word-break: break-word">{{ c.body }}</div>
           </div>
         </div>
         <p v-else style="color: #888">{{ $t('ticket.page.ticket.noComments') }}</p>
 
+        <div style="margin-bottom: 8px">
+          <Segmented v-model:value="mode" :options="composerModeOptions" />
+        </div>
+        <div
+          v-if="mode === 'reply'"
+          style="font-size: 12px; color: #888; margin-bottom: 6px"
+        >
+          <template v-if="ticket.requesterEmail">
+            {{ $t('ticket.page.ticket.replyingTo') }}
+            {{ ticket.requesterName ? ticket.requesterName + ' ' : '' }}&lt;{{ ticket.requesterEmail }}&gt;
+          </template>
+          <span v-else style="color: #c0392b">
+            {{ $t('ticket.page.ticket.noRequesterEmail') }}
+          </span>
+        </div>
         <Textarea
           v-model:value="newComment"
           :rows="3"
-          :placeholder="$t('ticket.page.ticket.addComment')"
+          :placeholder="
+            mode === 'reply'
+              ? $t('ticket.page.ticket.replyPlaceholder')
+              : $t('ticket.page.ticket.notePlaceholder')
+          "
         />
-        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px">
-          <Checkbox v-model:checked="internal">{{ $t('ticket.page.ticket.internalNote') }}</Checkbox>
-          <Button type="primary" :loading="posting" @click="postComment">
-            {{ $t('ticket.page.ticket.addComment') }}
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px">
+          <Button
+            type="primary"
+            :loading="posting"
+            :disabled="mode === 'reply' && !ticket.requesterEmail"
+            @click="postComment"
+          >
+            {{ mode === 'reply' ? $t('ticket.page.ticket.sendReply') : $t('ticket.page.ticket.addNote') }}
           </Button>
         </div>
       </div>

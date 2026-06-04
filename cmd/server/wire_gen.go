@@ -11,6 +11,7 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/cert"
 	"github.com/go-tangra/go-tangra-ticket/internal/client"
 	"github.com/go-tangra/go-tangra-ticket/internal/data"
+	"github.com/go-tangra/go-tangra-ticket/internal/mailer"
 	"github.com/go-tangra/go-tangra-ticket/internal/metrics"
 	"github.com/go-tangra/go-tangra-ticket/internal/rules"
 	"github.com/go-tangra/go-tangra-ticket/internal/server"
@@ -35,7 +36,8 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 	collector := metrics.NewCollector(context)
 	ticketService := service.NewTicketService(context, ticketRepo, attachmentRepo, collector)
 	commentRepo := data.NewCommentRepo(context, entClient)
-	commentService := service.NewCommentService(context, commentRepo, ticketRepo)
+	mailerMailer := mailer.NewMailer(context)
+	commentService := service.NewCommentService(context, commentRepo, ticketRepo, mailerMailer)
 	adminClient, cleanup2, err := client.NewAdminClient(context, v)
 	if err != nil {
 		cleanup()
@@ -59,7 +61,7 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	irisHandler := webhook.NewIrisHandler(context, ticketRepo, attachmentRepo, storageClient, tagRepo, ruleRepo, engine, collector)
+	irisHandler := webhook.NewIrisHandler(context, ticketRepo, commentRepo, attachmentRepo, storageClient, tagRepo, ruleRepo, engine, collector)
 	httpServer := server.NewHTTPServer(context, irisHandler, attachmentRepo, storageClient)
 	registrationClient, err := data.NewRegistrationClient(context)
 	if err != nil {

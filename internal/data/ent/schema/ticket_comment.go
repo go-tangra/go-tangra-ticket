@@ -43,6 +43,9 @@ func (TicketComment) Fields() []ent.Field {
 		field.String("author_email").
 			Optional().
 			Comment("External requester email when the reply came by mail"),
+		field.String("message_id").
+			Optional().
+			Comment("RFC822 Message-Id this comment was sent/received as (for threading)"),
 	}
 }
 
@@ -67,5 +70,6 @@ func (TicketComment) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id"),
 		index.Fields("ticket_id"),
+		index.Fields("tenant_id", "message_id"),
 	}
 }

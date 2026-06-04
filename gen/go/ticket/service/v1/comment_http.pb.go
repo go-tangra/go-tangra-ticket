@@ -23,11 +23,15 @@ const _ = http.SupportPackageIsVersion1
 const OperationTicketCommentServiceCreateComment = "/ticket.service.v1.TicketCommentService/CreateComment"
 const OperationTicketCommentServiceDeleteComment = "/ticket.service.v1.TicketCommentService/DeleteComment"
 const OperationTicketCommentServiceListComments = "/ticket.service.v1.TicketCommentService/ListComments"
+const OperationTicketCommentServiceReplyTicket = "/ticket.service.v1.TicketCommentService/ReplyTicket"
 
 type TicketCommentServiceHTTPServer interface {
 	CreateComment(context.Context, *CreateCommentRequest) (*CreateCommentResponse, error)
 	DeleteComment(context.Context, *DeleteCommentRequest) (*emptypb.Empty, error)
 	ListComments(context.Context, *ListCommentsRequest) (*ListCommentsResponse, error)
+	// ReplyTicket ReplyTicket posts a public reply AND emails it to the requester, stamping
+	// the threading headers so the requester's reply threads back onto the ticket.
+	ReplyTicket(context.Context, *ReplyTicketRequest) (*ReplyTicketResponse, error)
 }
 
 func RegisterTicketCommentServiceHTTPServer(s *http.Server, srv TicketCommentServiceHTTPServer) {
@@ -35,6 +39,7 @@ func RegisterTicketCommentServiceHTTPServer(s *http.Server, srv TicketCommentSer
 	r.POST("/v1/tickets/{ticket_id}/comments", _TicketCommentService_CreateComment0_HTTP_Handler(srv))
 	r.GET("/v1/tickets/{ticket_id}/comments", _TicketCommentService_ListComments0_HTTP_Handler(srv))
 	r.DELETE("/v1/comments/{id}", _TicketCommentService_DeleteComment0_HTTP_Handler(srv))
+	r.POST("/v1/tickets/{ticket_id}/reply", _TicketCommentService_ReplyTicket0_HTTP_Handler(srv))
 }
 
 func _TicketCommentService_CreateComment0_HTTP_Handler(srv TicketCommentServiceHTTPServer) func(ctx http.Context) error {
@@ -106,10 +111,38 @@ func _TicketCommentService_DeleteComment0_HTTP_Handler(srv TicketCommentServiceH
 	}
 }
 
+func _TicketCommentService_ReplyTicket0_HTTP_Handler(srv TicketCommentServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ReplyTicketRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationTicketCommentServiceReplyTicket)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ReplyTicket(ctx, req.(*ReplyTicketRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ReplyTicketResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 type TicketCommentServiceHTTPClient interface {
 	CreateComment(ctx context.Context, req *CreateCommentRequest, opts ...http.CallOption) (rsp *CreateCommentResponse, err error)
 	DeleteComment(ctx context.Context, req *DeleteCommentRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
 	ListComments(ctx context.Context, req *ListCommentsRequest, opts ...http.CallOption) (rsp *ListCommentsResponse, err error)
+	// ReplyTicket ReplyTicket posts a public reply AND emails it to the requester, stamping
+	// the threading headers so the requester's reply threads back onto the ticket.
+	ReplyTicket(ctx context.Context, req *ReplyTicketRequest, opts ...http.CallOption) (rsp *ReplyTicketResponse, err error)
 }
 
 type TicketCommentServiceHTTPClientImpl struct {
@@ -153,6 +186,21 @@ func (c *TicketCommentServiceHTTPClientImpl) ListComments(ctx context.Context, i
 	opts = append(opts, http.Operation(OperationTicketCommentServiceListComments))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ReplyTicket ReplyTicket posts a public reply AND emails it to the requester, stamping
+// the threading headers so the requester's reply threads back onto the ticket.
+func (c *TicketCommentServiceHTTPClientImpl) ReplyTicket(ctx context.Context, in *ReplyTicketRequest, opts ...http.CallOption) (*ReplyTicketResponse, error) {
+	var out ReplyTicketResponse
+	pattern := "/v1/tickets/{ticket_id}/reply"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationTicketCommentServiceReplyTicket))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

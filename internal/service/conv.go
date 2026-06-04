@@ -178,6 +178,7 @@ func commentToProto(e *ent.TicketComment, authorName string) *ticketpb.TicketCom
 		AuthorId:    e.AuthorID,
 		AuthorName:  authorName,
 		AuthorEmail: e.AuthorEmail,
+		MessageId:   e.MessageID,
 		CreateTime:  ts(e.CreateTime),
 	}
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent"
 	"github.com/go-tangra/go-tangra-ticket/internal/metrics"
 	"github.com/go-tangra/go-tangra-ticket/internal/rules"
+	"github.com/go-tangra/go-tangra-ticket/internal/thread"
 )
 
 const maxBodyBytes = 10 << 20 // 10 MiB
@@ -33,6 +34,7 @@ const maxBodyBytes = 10 << 20 // 10 MiB
 type IrisHandler struct {
 	log      *log.Helper
 	repo     *data.TicketRepo
+	comments *data.CommentRepo
 	attach   *data.AttachmentRepo
 	storage  *data.StorageClient
 	tags     *data.TagRepo
@@ -43,7 +45,7 @@ type IrisHandler struct {
 	tenantID uint32
 }
 
-func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, attach *data.AttachmentRepo, storage *data.StorageClient, tags *data.TagRepo, ruleRepo *data.RuleRepo, engine *rules.Engine, m *metrics.Collector) *IrisHandler {
+func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, comments *data.CommentRepo, attach *data.AttachmentRepo, storage *data.StorageClient, tags *data.TagRepo, ruleRepo *data.RuleRepo, engine *rules.Engine, m *metrics.Collector) *IrisHandler {
 	tid := uint32(0)
 	if v := os.Getenv("TICKET_DEFAULT_TENANT"); v != "" {
 		if n, err := strconv.ParseUint(v, 10, 32); err == nil {
@@ -53,6 +55,7 @@ func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, attach *data.
 	h := &IrisHandler{
 		log:      ctx.NewLoggerHelper("ticket/webhook/iris"),
 		repo:     repo,
+		comments: comments,
 		attach:   attach,
 		storage:  storage,
 		tags:     tags,
@@ -119,13 +122,30 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	// system viewer that ent's tenant/privacy layer requires for writes.
 	ctx := viewer.NewSystemViewerContext(r.Context())
 
-	// Idempotency: a repeated delivery of the same message is a no-op.
+	// Idempotency: a repeated delivery of the same message is a no-op (the
+	// message-id may already be a ticket root or a recorded comment).
+	if pm.messageID != "" {
+		if cid, _ := h.comments.FindTicketIDByMessageIDs(ctx, h.tenantID, []string{pm.messageID}); cid != "" {
+			h.log.Infof("iris webhook: duplicate reply %s -> ticket %s, ignored", pm.messageID, cid)
+			writeOK(w)
+			return
+		}
+	}
 	if externalID != "" {
 		if existing, _ := h.repo.FindByExternalID(ctx, h.tenantID, externalID); existing != nil {
 			h.log.Infof("iris webhook: duplicate message %s -> ticket %s, ignored", externalID, existing.ID)
 			writeOK(w)
 			return
 		}
+	}
+
+	// Threading: if this mail is a reply to an existing ticket, append it as a
+	// public comment instead of opening a new ticket.
+	if ticketID := h.findThreadTicket(ctx, pm, subject); ticketID != "" {
+		h.appendReply(ctx, ticketID, pm, fromEmail, fromName)
+		h.log.Infof("iris webhook: threaded reply from %q onto ticket %s", fromEmail, ticketID)
+		writeOK(w)
+		return
 	}
 
 	e, err := h.repo.Create(ctx, data.NewTicket{
@@ -153,6 +173,65 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	h.log.Infof("iris webhook: created ticket %s from %q (subject=%q, attachments=%d)", e.ID, fromEmail, subject, len(pm.attachments))
 	writeOK(w)
+}
+
+// findThreadTicket resolves an inbound reply to its ticket: first by the
+// In-Reply-To/References chain (against ticket roots and recorded comment
+// message-ids), then by the [#<id>] subject token. Returns "" for a new thread.
+func (h *IrisHandler) findThreadTicket(ctx context.Context, pm parsedMail, subject string) string {
+	candidates := make([]string, 0, len(pm.references)+1)
+	if pm.inReplyTo != "" {
+		candidates = append(candidates, pm.inReplyTo)
+	}
+	candidates = append(candidates, pm.references...)
+
+	// (1) match a recorded comment message-id.
+	if cid, _ := h.comments.FindTicketIDByMessageIDs(ctx, h.tenantID, candidates); cid != "" {
+		return cid
+	}
+	// (2) match a ticket root (external_id).
+	for _, id := range candidates {
+		if t, _ := h.repo.FindByExternalID(ctx, h.tenantID, id); t != nil {
+			return t.ID
+		}
+	}
+	// (3) subject token [#<id>].
+	if id := thread.ParseToken(subject); id != "" {
+		if t, _ := h.repo.Get(ctx, h.tenantID, id); t != nil {
+			return t.ID
+		}
+	}
+	return ""
+}
+
+// appendReply records an inbound reply as a public comment and re-opens the
+// ticket if it was resolved/closed. Attachments are stored on the ticket.
+func (h *IrisHandler) appendReply(ctx context.Context, ticketID string, pm parsedMail, fromEmail, fromName string) {
+	body := pm.text
+	if body == "" {
+		body = "(empty message)"
+	}
+	_ = fromName
+	if _, err := h.comments.Create(ctx, data.NewComment{
+		TenantID:    h.tenantID,
+		TicketID:    ticketID,
+		Body:        body,
+		Internal:    false,
+		AuthorEmail: fromEmail,
+		MessageID:   pm.messageID,
+	}); err != nil {
+		h.log.Errorf("iris webhook: append reply to %s failed: %v", ticketID, err)
+		return
+	}
+	h.storeAttachments(ctx, ticketID, pm.attachments)
+
+	if tk, _ := h.repo.Get(ctx, h.tenantID, ticketID); tk != nil {
+		if tk.Status == "TICKET_STATUS_RESOLVED" || tk.Status == "TICKET_STATUS_CLOSED" {
+			if _, err := h.repo.UpdateStatus(ctx, h.tenantID, ticketID, "TICKET_STATUS_OPEN"); err != nil {
+				h.log.Warnf("iris webhook: reopen ticket %s failed: %v", ticketID, err)
+			}
+		}
+	}
 }
 
 // applyRules evaluates enabled auto-tagging rules against the parsed email and

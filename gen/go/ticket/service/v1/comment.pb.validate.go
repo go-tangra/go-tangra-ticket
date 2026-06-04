@@ -102,6 +102,8 @@ func (m *TicketComment) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for MessageId
+
 	if len(errors) > 0 {
 		return TicketCommentMultiError(errors)
 	}
@@ -764,3 +766,240 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = DeleteCommentRequestValidationError{}
+
+// Validate checks the field values on ReplyTicketRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReplyTicketRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReplyTicketRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReplyTicketRequestMultiError, or nil if none found.
+func (m *ReplyTicketRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReplyTicketRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for TicketId
+
+	// no validation rules for Body
+
+	if len(errors) > 0 {
+		return ReplyTicketRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReplyTicketRequestMultiError is an error wrapping multiple validation errors
+// returned by ReplyTicketRequest.ValidateAll() if the designated constraints
+// aren't met.
+type ReplyTicketRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReplyTicketRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReplyTicketRequestMultiError) AllErrors() []error { return m }
+
+// ReplyTicketRequestValidationError is the validation error returned by
+// ReplyTicketRequest.Validate if the designated constraints aren't met.
+type ReplyTicketRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReplyTicketRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReplyTicketRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReplyTicketRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReplyTicketRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReplyTicketRequestValidationError) ErrorName() string {
+	return "ReplyTicketRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReplyTicketRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReplyTicketRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReplyTicketRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReplyTicketRequestValidationError{}
+
+// Validate checks the field values on ReplyTicketResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReplyTicketResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReplyTicketResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReplyTicketResponseMultiError, or nil if none found.
+func (m *ReplyTicketResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReplyTicketResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetComment()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ReplyTicketResponseValidationError{
+					field:  "Comment",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ReplyTicketResponseValidationError{
+					field:  "Comment",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetComment()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ReplyTicketResponseValidationError{
+				field:  "Comment",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return ReplyTicketResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReplyTicketResponseMultiError is an error wrapping multiple validation
+// errors returned by ReplyTicketResponse.ValidateAll() if the designated
+// constraints aren't met.
+type ReplyTicketResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReplyTicketResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReplyTicketResponseMultiError) AllErrors() []error { return m }
+
+// ReplyTicketResponseValidationError is the validation error returned by
+// ReplyTicketResponse.Validate if the designated constraints aren't met.
+type ReplyTicketResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReplyTicketResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReplyTicketResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReplyTicketResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReplyTicketResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReplyTicketResponseValidationError) ErrorName() string {
+	return "ReplyTicketResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReplyTicketResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReplyTicketResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReplyTicketResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReplyTicketResponseValidationError{}

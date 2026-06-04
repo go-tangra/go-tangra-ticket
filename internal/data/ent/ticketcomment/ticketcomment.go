@@ -31,6 +31,8 @@ const (
 	FieldAuthorID = "author_id"
 	// FieldAuthorEmail holds the string denoting the author_email field in the database.
 	FieldAuthorEmail = "author_email"
+	// FieldMessageID holds the string denoting the message_id field in the database.
+	FieldMessageID = "message_id"
 	// EdgeTicket holds the string denoting the ticket edge name in mutations.
 	EdgeTicket = "ticket"
 	// Table holds the table name of the ticketcomment in the database.
@@ -56,6 +58,7 @@ var Columns = []string{
 	FieldInternal,
 	FieldAuthorID,
 	FieldAuthorEmail,
+	FieldMessageID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -141,6 +144,11 @@ func ByAuthorID(opts ...sql.OrderTermOption) OrderOption {
 // ByAuthorEmail orders the results by the author_email field.
 func ByAuthorEmail(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAuthorEmail, opts...).ToFunc()
+}
+
+// ByMessageID orders the results by the message_id field.
+func ByMessageID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMessageID, opts...).ToFunc()
 }
 
 // ByTicketField orders the results by ticket field.

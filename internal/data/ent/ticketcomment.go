@@ -37,6 +37,8 @@ type TicketComment struct {
 	AuthorID uint32 `json:"author_id,omitempty"`
 	// External requester email when the reply came by mail
 	AuthorEmail string `json:"author_email,omitempty"`
+	// RFC822 Message-Id this comment was sent/received as (for threading)
+	MessageID string `json:"message_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TicketCommentQuery when eager-loading is set.
 	Edges        TicketCommentEdges `json:"edges"`
@@ -72,7 +74,7 @@ func (*TicketComment) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case ticketcomment.FieldTenantID, ticketcomment.FieldAuthorID:
 			values[i] = new(sql.NullInt64)
-		case ticketcomment.FieldID, ticketcomment.FieldTicketID, ticketcomment.FieldBody, ticketcomment.FieldAuthorEmail:
+		case ticketcomment.FieldID, ticketcomment.FieldTicketID, ticketcomment.FieldBody, ticketcomment.FieldAuthorEmail, ticketcomment.FieldMessageID:
 			values[i] = new(sql.NullString)
 		case ticketcomment.FieldCreateTime, ticketcomment.FieldUpdateTime, ticketcomment.FieldDeleteTime:
 			values[i] = new(sql.NullTime)
@@ -155,6 +157,12 @@ func (_m *TicketComment) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.AuthorEmail = value.String
 			}
+		case ticketcomment.FieldMessageID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field message_id", values[i])
+			} else if value.Valid {
+				_m.MessageID = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -230,6 +238,9 @@ func (_m *TicketComment) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("author_email=")
 	builder.WriteString(_m.AuthorEmail)
+	builder.WriteString(", ")
+	builder.WriteString("message_id=")
+	builder.WriteString(_m.MessageID)
 	builder.WriteByte(')')
 	return builder.String()
 }

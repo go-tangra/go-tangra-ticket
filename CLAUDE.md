@@ -46,8 +46,25 @@ the `X-Ticket-Token` header, `?token=` query param, or `Bearer` Authorization.
 If the env var is unset the endpoint is open (logged loudly at startup) — set
 it in production.
 
-> v1 limitation: MIME multipart bodies are stored as the raw body in
-> `description`; a follow-up can walk parts to extract `text/plain`.
+## Email threading (reply chaining)
+
+Operators reply from the ticket drawer (Reply vs Internal note). A **Reply**
+(`TicketCommentService.ReplyTicket`) emails the requester over the SMTP relay
+and records a public comment; an **Internal note** stays private.
+
+Outbound replies are stamped so the requester's response threads back:
+- **Message-ID** — `ticket.<id>.<uuid>@<domain>`, stored on the comment.
+- **In-Reply-To / References** — the thread root (`external_id`) + the most
+  recent message-id in the thread.
+- **Subject token** — `[#<ticket-id>]` appended once (with a single `Re:`).
+- **From** — the ticket's `recipient` (the support address that received the
+  original), falling back to `TICKET_SMTP_FROM`.
+
+Inbound matching (`internal/webhook/iris.go` → `findThreadTicket`): ① comment
+`message_id` ∈ References/In-Reply-To, ② ticket `external_id` ∈ those,
+③ `[#<id>]` subject token. A match appends a public comment (and re-opens a
+resolved/closed ticket) instead of creating a new ticket. Threading helpers
+live in `internal/thread`; SMTP sending in `internal/mailer` (wneessen/go-mail).
 
 ## Configuration / env
 
@@ -55,6 +72,7 @@ it in production.
 - `HTTP_PUBLIC_BIND` (default `:10801`), `METRICS_ADDR` (default `:10810`).
 - `TICKET_WEBHOOK_TOKEN` — shared secret for the iris webhook.
 - `TICKET_DEFAULT_TENANT` — tenant id assigned to inbound-email tickets (default `0`).
+- **SMTP relay (outbound replies):** `TICKET_SMTP_HOST` (enables sending; unset = replies disabled), `TICKET_SMTP_PORT` (default `587`), `TICKET_SMTP_USERNAME`/`TICKET_SMTP_PASSWORD` (optional), `TICKET_SMTP_FROM` (fallback From), `TICKET_SMTP_FROM_NAME` (default `Support`), `TICKET_SMTP_TLS` (`starttls`|`ssl`|`none`, default `starttls`), `TICKET_SMTP_INSECURE` (`1` to skip cert verify), `TICKET_MAIL_DOMAIN` (Message-ID/token host; defaults to the From domain).
 
 ## Codegen
 

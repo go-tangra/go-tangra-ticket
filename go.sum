@@ -244,6 +244,8 @@ github.com/tx7do/kratos-bootstrap/registry v0.2.2 h1:CxeR6X1M94LhqYG8FtSNKgS06QY
 github.com/tx7do/kratos-bootstrap/registry v0.2.2/go.mod h1:c4Qv30GUXiFV2kcNx4z5+iiflkiGNMimp9TVuLFMAzE=
 github.com/tx7do/kratos-bootstrap/tracer v0.1.3 h1:3JVbtiyKB0rGOJIFrxC/OnAt88aew2Z5cGqHWe3C/7o=
 github.com/tx7do/kratos-bootstrap/tracer v0.1.3/go.mod h1:sYjqGC8dsIugje+GZ8Ot9tuo1d1/Q61ru5mu71FUSQo=
+github.com/wneessen/go-mail v0.7.3 h1:g3DravXC5SMlVdboFrQA8Jx95A8sOzoBeS5F+vzNRK0=
+github.com/wneessen/go-mail v0.7.3/go.mod h1:QGhBX0yNbc1J+Mkjcu7z2rpj4B4l+BmDY8gYznPC9sk=
 github.com/xiaoqidun/entps v1.44.2 h1:eHYpWnLEkRpRKkU1u6TNgYyITB0tDuYloKN0A2CujAA=
 github.com/xiaoqidun/entps v1.44.2/go.mod h1:ph6KV41/tYU08rjYqu6V4cKI/RhXUTJLEIeAsH3GMA4=
 github.com/zclconf/go-cty v1.17.0 h1:seZvECve6XX4tmnvRzWtJNHdscMtYEx5R7bnnVyd/d0=

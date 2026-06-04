@@ -79,6 +79,17 @@ func (s *redactedTicketCommentServiceServer) DeleteComment(ctx context.Context, 
 	return res, err
 }
 
+// ReplyTicket is the redacted wrapper for the actual TicketCommentServiceServer.ReplyTicket method
+// Unary RPC
+func (s *redactedTicketCommentServiceServer) ReplyTicket(ctx context.Context, in *ReplyTicketRequest) (*ReplyTicketResponse, error) {
+	res, err := s.srv.ReplyTicket(ctx, in)
+	if !s.bypass.CheckInternal(ctx) {
+		// Apply redaction to the response
+		redact.Apply(res)
+	}
+	return res, err
+}
+
 // Redact method implementation for TicketComment
 func (x *TicketComment) Redact() string {
 	if x == nil {
@@ -102,6 +113,8 @@ func (x *TicketComment) Redact() string {
 	// Safe field: AuthorEmail
 
 	// Safe field: CreateTime
+
+	// Safe field: MessageId
 	return x.String()
 }
 
@@ -158,5 +171,27 @@ func (x *DeleteCommentRequest) Redact() string {
 	}
 
 	// Safe field: Id
+	return x.String()
+}
+
+// Redact method implementation for ReplyTicketRequest
+func (x *ReplyTicketRequest) Redact() string {
+	if x == nil {
+		return ""
+	}
+
+	// Safe field: TicketId
+
+	// Safe field: Body
+	return x.String()
+}
+
+// Redact method implementation for ReplyTicketResponse
+func (x *ReplyTicketResponse) Redact() string {
+	if x == nil {
+		return ""
+	}
+
+	// Safe field: Comment
 	return x.String()
 }

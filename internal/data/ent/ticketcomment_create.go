@@ -134,6 +134,20 @@ func (_c *TicketCommentCreate) SetNillableAuthorEmail(v *string) *TicketCommentC
 	return _c
 }
 
+// SetMessageID sets the "message_id" field.
+func (_c *TicketCommentCreate) SetMessageID(v string) *TicketCommentCreate {
+	_c.mutation.SetMessageID(v)
+	return _c
+}
+
+// SetNillableMessageID sets the "message_id" field if the given value is not nil.
+func (_c *TicketCommentCreate) SetNillableMessageID(v *string) *TicketCommentCreate {
+	if v != nil {
+		_c.SetMessageID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TicketCommentCreate) SetID(v string) *TicketCommentCreate {
 	_c.mutation.SetID(v)
@@ -296,6 +310,10 @@ func (_c *TicketCommentCreate) createSpec() (*TicketComment, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.AuthorEmail(); ok {
 		_spec.SetField(ticketcomment.FieldAuthorEmail, field.TypeString, value)
 		_node.AuthorEmail = value
+	}
+	if value, ok := _c.mutation.MessageID(); ok {
+		_spec.SetField(ticketcomment.FieldMessageID, field.TypeString, value)
+		_node.MessageID = value
 	}
 	if nodes := _c.mutation.TicketIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -471,6 +489,24 @@ func (u *TicketCommentUpsert) UpdateAuthorEmail() *TicketCommentUpsert {
 // ClearAuthorEmail clears the value of the "author_email" field.
 func (u *TicketCommentUpsert) ClearAuthorEmail() *TicketCommentUpsert {
 	u.SetNull(ticketcomment.FieldAuthorEmail)
+	return u
+}
+
+// SetMessageID sets the "message_id" field.
+func (u *TicketCommentUpsert) SetMessageID(v string) *TicketCommentUpsert {
+	u.Set(ticketcomment.FieldMessageID, v)
+	return u
+}
+
+// UpdateMessageID sets the "message_id" field to the value that was provided on create.
+func (u *TicketCommentUpsert) UpdateMessageID() *TicketCommentUpsert {
+	u.SetExcluded(ticketcomment.FieldMessageID)
+	return u
+}
+
+// ClearMessageID clears the value of the "message_id" field.
+func (u *TicketCommentUpsert) ClearMessageID() *TicketCommentUpsert {
+	u.SetNull(ticketcomment.FieldMessageID)
 	return u
 }
 
@@ -651,6 +687,27 @@ func (u *TicketCommentUpsertOne) UpdateAuthorEmail() *TicketCommentUpsertOne {
 func (u *TicketCommentUpsertOne) ClearAuthorEmail() *TicketCommentUpsertOne {
 	return u.Update(func(s *TicketCommentUpsert) {
 		s.ClearAuthorEmail()
+	})
+}
+
+// SetMessageID sets the "message_id" field.
+func (u *TicketCommentUpsertOne) SetMessageID(v string) *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.SetMessageID(v)
+	})
+}
+
+// UpdateMessageID sets the "message_id" field to the value that was provided on create.
+func (u *TicketCommentUpsertOne) UpdateMessageID() *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.UpdateMessageID()
+	})
+}
+
+// ClearMessageID clears the value of the "message_id" field.
+func (u *TicketCommentUpsertOne) ClearMessageID() *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.ClearMessageID()
 	})
 }
 
@@ -998,6 +1055,27 @@ func (u *TicketCommentUpsertBulk) UpdateAuthorEmail() *TicketCommentUpsertBulk {
 func (u *TicketCommentUpsertBulk) ClearAuthorEmail() *TicketCommentUpsertBulk {
 	return u.Update(func(s *TicketCommentUpsert) {
 		s.ClearAuthorEmail()
+	})
+}
+
+// SetMessageID sets the "message_id" field.
+func (u *TicketCommentUpsertBulk) SetMessageID(v string) *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.SetMessageID(v)
+	})
+}
+
+// UpdateMessageID sets the "message_id" field to the value that was provided on create.
+func (u *TicketCommentUpsertBulk) UpdateMessageID() *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.UpdateMessageID()
+	})
+}
+
+// ClearMessageID clears the value of the "message_id" field.
+func (u *TicketCommentUpsertBulk) ClearMessageID() *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.ClearMessageID()
 	})
 }
 

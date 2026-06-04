@@ -45,6 +45,13 @@ export const useTicketStore = defineStore('ticket-ticket', () => {
     return (await commentService.CreateComment({ ticketId, body, internal })).comment;
   }
 
+  async function replyTicket(
+    ticketId: string,
+    body: string,
+  ): Promise<TicketComment | undefined> {
+    return (await commentService.ReplyTicket({ ticketId, body })).comment;
+  }
+
   async function listAssignableUsers(): Promise<AssignableUser[]> {
     return (await userService.ListAssignableUsers({})).users ?? [];
   }
@@ -60,6 +67,7 @@ export const useTicketStore = defineStore('ticket-ticket', () => {
     deleteTicket,
     listComments,
     addComment,
+    replyTicket,
     listAssignableUsers,
   };
 });

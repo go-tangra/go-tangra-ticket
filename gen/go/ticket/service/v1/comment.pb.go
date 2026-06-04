@@ -38,8 +38,11 @@ type TicketComment struct {
 	AuthorId   uint32 `protobuf:"varint,6,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
 	AuthorName string `protobuf:"bytes,7,opt,name=author_name,json=authorName,proto3" json:"author_name,omitempty"`
 	// author_email is set when the comment came from an external requester reply.
-	AuthorEmail   string                 `protobuf:"bytes,8,opt,name=author_email,json=authorEmail,proto3" json:"author_email,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	AuthorEmail string                 `protobuf:"bytes,8,opt,name=author_email,json=authorEmail,proto3" json:"author_email,omitempty"`
+	CreateTime  *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// message_id is the RFC822 Message-Id of the email this comment was sent or
+	// received as (empty for internal notes).
+	MessageId     string `protobuf:"bytes,10,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -135,6 +138,13 @@ func (x *TicketComment) GetCreateTime() *timestamppb.Timestamp {
 		return x.CreateTime
 	}
 	return nil
+}
+
+func (x *TicketComment) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
 }
 
 type CreateCommentRequest struct {
@@ -381,11 +391,107 @@ func (x *DeleteCommentRequest) GetId() string {
 	return ""
 }
 
+type ReplyTicketRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TicketId      string                 `protobuf:"bytes,1,opt,name=ticket_id,json=ticketId,proto3" json:"ticket_id,omitempty"`
+	Body          string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplyTicketRequest) Reset() {
+	*x = ReplyTicketRequest{}
+	mi := &file_ticket_service_v1_comment_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplyTicketRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplyTicketRequest) ProtoMessage() {}
+
+func (x *ReplyTicketRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ticket_service_v1_comment_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplyTicketRequest.ProtoReflect.Descriptor instead.
+func (*ReplyTicketRequest) Descriptor() ([]byte, []int) {
+	return file_ticket_service_v1_comment_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ReplyTicketRequest) GetTicketId() string {
+	if x != nil {
+		return x.TicketId
+	}
+	return ""
+}
+
+func (x *ReplyTicketRequest) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+type ReplyTicketResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Comment       *TicketComment         `protobuf:"bytes,1,opt,name=comment,proto3" json:"comment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplyTicketResponse) Reset() {
+	*x = ReplyTicketResponse{}
+	mi := &file_ticket_service_v1_comment_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplyTicketResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplyTicketResponse) ProtoMessage() {}
+
+func (x *ReplyTicketResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ticket_service_v1_comment_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplyTicketResponse.ProtoReflect.Descriptor instead.
+func (*ReplyTicketResponse) Descriptor() ([]byte, []int) {
+	return file_ticket_service_v1_comment_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ReplyTicketResponse) GetComment() *TicketComment {
+	if x != nil {
+		return x.Comment
+	}
+	return nil
+}
+
 var File_ticket_service_v1_comment_proto protoreflect.FileDescriptor
 
 const file_ticket_service_v1_comment_proto_rawDesc = "" +
 	"\n" +
-	"\x1fticket/service/v1/comment.proto\x12\x11ticket.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\x02\n" +
+	"\x1fticket/service/v1/comment.proto\x12\x11ticket.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc6\x02\n" +
 	"\rTicketComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\rR\btenantId\x12\x1b\n" +
@@ -397,7 +503,10 @@ const file_ticket_service_v1_comment_proto_rawDesc = "" +
 	"authorName\x12!\n" +
 	"\fauthor_email\x18\b \x01(\tR\vauthorEmail\x12;\n" +
 	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\"t\n" +
+	"createTime\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\n" +
+	" \x01(\tR\tmessageId\"t\n" +
 	"\x14CreateCommentRequest\x12 \n" +
 	"\tticket_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bticketId\x12\x1e\n" +
 	"\x04body\x18\x02 \x01(\tB\n" +
@@ -411,11 +520,18 @@ const file_ticket_service_v1_comment_proto_rawDesc = "" +
 	"\bcomments\x18\x01 \x03(\v2 .ticket.service.v1.TicketCommentR\bcomments\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\"+\n" +
 	"\x14DeleteCommentRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id2\xa1\x03\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"V\n" +
+	"\x12ReplyTicketRequest\x12 \n" +
+	"\tticket_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bticketId\x12\x1e\n" +
+	"\x04body\x18\x02 \x01(\tB\n" +
+	"\xe0A\x02\xbaH\x04r\x02\x10\x01R\x04body\"Q\n" +
+	"\x13ReplyTicketResponse\x12:\n" +
+	"\acomment\x18\x01 \x01(\v2 .ticket.service.v1.TicketCommentR\acomment2\xaa\x04\n" +
 	"\x14TicketCommentService\x12\x8f\x01\n" +
 	"\rCreateComment\x12'.ticket.service.v1.CreateCommentRequest\x1a(.ticket.service.v1.CreateCommentResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /v1/tickets/{ticket_id}/comments\x12\x89\x01\n" +
 	"\fListComments\x12&.ticket.service.v1.ListCommentsRequest\x1a'.ticket.service.v1.ListCommentsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/tickets/{ticket_id}/comments\x12k\n" +
-	"\rDeleteComment\x12'.ticket.service.v1.DeleteCommentRequest\x1a\x16.google.protobuf.Empty\"\x19\x82\xd3\xe4\x93\x02\x13*\x11/v1/comments/{id}B\xd4\x01\n" +
+	"\rDeleteComment\x12'.ticket.service.v1.DeleteCommentRequest\x1a\x16.google.protobuf.Empty\"\x19\x82\xd3\xe4\x93\x02\x13*\x11/v1/comments/{id}\x12\x86\x01\n" +
+	"\vReplyTicket\x12%.ticket.service.v1.ReplyTicketRequest\x1a&.ticket.service.v1.ReplyTicketResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/tickets/{ticket_id}/replyB\xd4\x01\n" +
 	"\x15com.ticket.service.v1B\fCommentProtoP\x01ZGgithub.com/go-tangra/go-tangra-ticket/gen/go/ticket/service/v1;ticketpb\xa2\x02\x03TSX\xaa\x02\x11Ticket.Service.V1\xca\x02\x11Ticket\\Service\\V1\xe2\x02\x1dTicket\\Service\\V1\\GPBMetadata\xea\x02\x13Ticket::Service::V1b\x06proto3"
 
 var (
@@ -430,7 +546,7 @@ func file_ticket_service_v1_comment_proto_rawDescGZIP() []byte {
 	return file_ticket_service_v1_comment_proto_rawDescData
 }
 
-var file_ticket_service_v1_comment_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_ticket_service_v1_comment_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_ticket_service_v1_comment_proto_goTypes = []any{
 	(*TicketComment)(nil),         // 0: ticket.service.v1.TicketComment
 	(*CreateCommentRequest)(nil),  // 1: ticket.service.v1.CreateCommentRequest
@@ -438,24 +554,29 @@ var file_ticket_service_v1_comment_proto_goTypes = []any{
 	(*ListCommentsRequest)(nil),   // 3: ticket.service.v1.ListCommentsRequest
 	(*ListCommentsResponse)(nil),  // 4: ticket.service.v1.ListCommentsResponse
 	(*DeleteCommentRequest)(nil),  // 5: ticket.service.v1.DeleteCommentRequest
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 7: google.protobuf.Empty
+	(*ReplyTicketRequest)(nil),    // 6: ticket.service.v1.ReplyTicketRequest
+	(*ReplyTicketResponse)(nil),   // 7: ticket.service.v1.ReplyTicketResponse
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 9: google.protobuf.Empty
 }
 var file_ticket_service_v1_comment_proto_depIdxs = []int32{
-	6, // 0: ticket.service.v1.TicketComment.create_time:type_name -> google.protobuf.Timestamp
+	8, // 0: ticket.service.v1.TicketComment.create_time:type_name -> google.protobuf.Timestamp
 	0, // 1: ticket.service.v1.CreateCommentResponse.comment:type_name -> ticket.service.v1.TicketComment
 	0, // 2: ticket.service.v1.ListCommentsResponse.comments:type_name -> ticket.service.v1.TicketComment
-	1, // 3: ticket.service.v1.TicketCommentService.CreateComment:input_type -> ticket.service.v1.CreateCommentRequest
-	3, // 4: ticket.service.v1.TicketCommentService.ListComments:input_type -> ticket.service.v1.ListCommentsRequest
-	5, // 5: ticket.service.v1.TicketCommentService.DeleteComment:input_type -> ticket.service.v1.DeleteCommentRequest
-	2, // 6: ticket.service.v1.TicketCommentService.CreateComment:output_type -> ticket.service.v1.CreateCommentResponse
-	4, // 7: ticket.service.v1.TicketCommentService.ListComments:output_type -> ticket.service.v1.ListCommentsResponse
-	7, // 8: ticket.service.v1.TicketCommentService.DeleteComment:output_type -> google.protobuf.Empty
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 3: ticket.service.v1.ReplyTicketResponse.comment:type_name -> ticket.service.v1.TicketComment
+	1, // 4: ticket.service.v1.TicketCommentService.CreateComment:input_type -> ticket.service.v1.CreateCommentRequest
+	3, // 5: ticket.service.v1.TicketCommentService.ListComments:input_type -> ticket.service.v1.ListCommentsRequest
+	5, // 6: ticket.service.v1.TicketCommentService.DeleteComment:input_type -> ticket.service.v1.DeleteCommentRequest
+	6, // 7: ticket.service.v1.TicketCommentService.ReplyTicket:input_type -> ticket.service.v1.ReplyTicketRequest
+	2, // 8: ticket.service.v1.TicketCommentService.CreateComment:output_type -> ticket.service.v1.CreateCommentResponse
+	4, // 9: ticket.service.v1.TicketCommentService.ListComments:output_type -> ticket.service.v1.ListCommentsResponse
+	9, // 10: ticket.service.v1.TicketCommentService.DeleteComment:output_type -> google.protobuf.Empty
+	7, // 11: ticket.service.v1.TicketCommentService.ReplyTicket:output_type -> ticket.service.v1.ReplyTicketResponse
+	8, // [8:12] is the sub-list for method output_type
+	4, // [4:8] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_ticket_service_v1_comment_proto_init() }
@@ -469,7 +590,7 @@ func file_ticket_service_v1_comment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ticket_service_v1_comment_proto_rawDesc), len(file_ticket_service_v1_comment_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
