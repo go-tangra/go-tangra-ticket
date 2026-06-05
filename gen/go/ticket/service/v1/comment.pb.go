@@ -42,7 +42,9 @@ type TicketComment struct {
 	CreateTime  *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// message_id is the RFC822 Message-Id of the email this comment was sent or
 	// received as (empty for internal notes).
-	MessageId     string `protobuf:"bytes,10,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	MessageId string `protobuf:"bytes,10,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	// author_kind: agent | requester | system (system = automatic acknowledgement).
+	AuthorKind    string `protobuf:"bytes,11,opt,name=author_kind,json=authorKind,proto3" json:"author_kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -143,6 +145,13 @@ func (x *TicketComment) GetCreateTime() *timestamppb.Timestamp {
 func (x *TicketComment) GetMessageId() string {
 	if x != nil {
 		return x.MessageId
+	}
+	return ""
+}
+
+func (x *TicketComment) GetAuthorKind() string {
+	if x != nil {
+		return x.AuthorKind
 	}
 	return ""
 }
@@ -491,7 +500,7 @@ var File_ticket_service_v1_comment_proto protoreflect.FileDescriptor
 
 const file_ticket_service_v1_comment_proto_rawDesc = "" +
 	"\n" +
-	"\x1fticket/service/v1/comment.proto\x12\x11ticket.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc6\x02\n" +
+	"\x1fticket/service/v1/comment.proto\x12\x11ticket.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe7\x02\n" +
 	"\rTicketComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\rR\btenantId\x12\x1b\n" +
@@ -506,7 +515,9 @@ const file_ticket_service_v1_comment_proto_rawDesc = "" +
 	"createTime\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\n" +
-	" \x01(\tR\tmessageId\"t\n" +
+	" \x01(\tR\tmessageId\x12\x1f\n" +
+	"\vauthor_kind\x18\v \x01(\tR\n" +
+	"authorKind\"t\n" +
 	"\x14CreateCommentRequest\x12 \n" +
 	"\tticket_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bticketId\x12\x1e\n" +
 	"\x04body\x18\x02 \x01(\tB\n" +

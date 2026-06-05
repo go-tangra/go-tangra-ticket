@@ -134,6 +134,10 @@ func init() {
 	ticketcommentDescAuthorID := ticketcommentFields[4].Descriptor()
 	// ticketcomment.DefaultAuthorID holds the default value on creation for the author_id field.
 	ticketcomment.DefaultAuthorID = ticketcommentDescAuthorID.Default.(uint32)
+	// ticketcommentDescAuthorKind is the schema descriptor for author_kind field.
+	ticketcommentDescAuthorKind := ticketcommentFields[7].Descriptor()
+	// ticketcomment.DefaultAuthorKind holds the default value on creation for the author_kind field.
+	ticketcomment.DefaultAuthorKind = ticketcommentDescAuthorKind.Default.(string)
 	// ticketcommentDescID is the schema descriptor for id field.
 	ticketcommentDescID := ticketcommentFields[0].Descriptor()
 	// ticketcomment.IDValidator is a validator for the "id" field. It is called by the builders before save.

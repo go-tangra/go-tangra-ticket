@@ -176,9 +176,17 @@ func commentToProto(e *ent.TicketComment, authorName string) *ticketpb.TicketCom
 		Body:        e.Body,
 		Internal:    e.Internal,
 		AuthorId:    e.AuthorID,
-		AuthorName:  authorName,
+		AuthorName:  firstNonEmpty(e.AuthorName, authorName),
 		AuthorEmail: e.AuthorEmail,
+		AuthorKind:  e.AuthorKind,
 		MessageId:   e.MessageID,
 		CreateTime:  ts(e.CreateTime),
 	}
+}
+
+func firstNonEmpty(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }

@@ -32,10 +32,16 @@ type NewComment struct {
 	Internal    bool
 	AuthorID    uint32
 	AuthorEmail string
+	AuthorName  string
+	AuthorKind  string
 	MessageID   string
 }
 
 func (r *CommentRepo) Create(ctx context.Context, c NewComment) (*ent.TicketComment, error) {
+	kind := c.AuthorKind
+	if kind == "" {
+		kind = "agent"
+	}
 	e, err := r.entClient.Client().TicketComment.Create().
 		SetID(uuid.NewString()).
 		SetTenantID(c.TenantID).
@@ -44,6 +50,8 @@ func (r *CommentRepo) Create(ctx context.Context, c NewComment) (*ent.TicketComm
 		SetInternal(c.Internal).
 		SetAuthorID(c.AuthorID).
 		SetAuthorEmail(c.AuthorEmail).
+		SetAuthorName(c.AuthorName).
+		SetAuthorKind(kind).
 		SetMessageID(c.MessageID).
 		SetCreateTime(time.Now()).
 		SetUpdateTime(time.Now()).

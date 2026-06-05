@@ -19,6 +19,8 @@ export type TicketComment = {
   // message_id is the RFC822 Message-Id of the email this comment was sent or
   // received as (empty for internal notes).
   messageId: string | undefined;
+  // author_kind: agent | requester | system (system = automatic acknowledgement).
+  authorKind: string | undefined;
 };
 
 // Encoded using RFC 3339, where generated output will always be Z-normalized

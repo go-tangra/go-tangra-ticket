@@ -148,6 +148,34 @@ func (_c *TicketCommentCreate) SetNillableMessageID(v *string) *TicketCommentCre
 	return _c
 }
 
+// SetAuthorKind sets the "author_kind" field.
+func (_c *TicketCommentCreate) SetAuthorKind(v string) *TicketCommentCreate {
+	_c.mutation.SetAuthorKind(v)
+	return _c
+}
+
+// SetNillableAuthorKind sets the "author_kind" field if the given value is not nil.
+func (_c *TicketCommentCreate) SetNillableAuthorKind(v *string) *TicketCommentCreate {
+	if v != nil {
+		_c.SetAuthorKind(*v)
+	}
+	return _c
+}
+
+// SetAuthorName sets the "author_name" field.
+func (_c *TicketCommentCreate) SetAuthorName(v string) *TicketCommentCreate {
+	_c.mutation.SetAuthorName(v)
+	return _c
+}
+
+// SetNillableAuthorName sets the "author_name" field if the given value is not nil.
+func (_c *TicketCommentCreate) SetNillableAuthorName(v *string) *TicketCommentCreate {
+	if v != nil {
+		_c.SetAuthorName(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TicketCommentCreate) SetID(v string) *TicketCommentCreate {
 	_c.mutation.SetID(v)
@@ -208,6 +236,10 @@ func (_c *TicketCommentCreate) defaults() error {
 		v := ticketcomment.DefaultAuthorID
 		_c.mutation.SetAuthorID(v)
 	}
+	if _, ok := _c.mutation.AuthorKind(); !ok {
+		v := ticketcomment.DefaultAuthorKind
+		_c.mutation.SetAuthorKind(v)
+	}
 	return nil
 }
 
@@ -234,6 +266,9 @@ func (_c *TicketCommentCreate) check() error {
 	}
 	if _, ok := _c.mutation.AuthorID(); !ok {
 		return &ValidationError{Name: "author_id", err: errors.New(`ent: missing required field "TicketComment.author_id"`)}
+	}
+	if _, ok := _c.mutation.AuthorKind(); !ok {
+		return &ValidationError{Name: "author_kind", err: errors.New(`ent: missing required field "TicketComment.author_kind"`)}
 	}
 	if v, ok := _c.mutation.ID(); ok {
 		if err := ticketcomment.IDValidator(v); err != nil {
@@ -314,6 +349,14 @@ func (_c *TicketCommentCreate) createSpec() (*TicketComment, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.MessageID(); ok {
 		_spec.SetField(ticketcomment.FieldMessageID, field.TypeString, value)
 		_node.MessageID = value
+	}
+	if value, ok := _c.mutation.AuthorKind(); ok {
+		_spec.SetField(ticketcomment.FieldAuthorKind, field.TypeString, value)
+		_node.AuthorKind = value
+	}
+	if value, ok := _c.mutation.AuthorName(); ok {
+		_spec.SetField(ticketcomment.FieldAuthorName, field.TypeString, value)
+		_node.AuthorName = value
 	}
 	if nodes := _c.mutation.TicketIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -507,6 +550,36 @@ func (u *TicketCommentUpsert) UpdateMessageID() *TicketCommentUpsert {
 // ClearMessageID clears the value of the "message_id" field.
 func (u *TicketCommentUpsert) ClearMessageID() *TicketCommentUpsert {
 	u.SetNull(ticketcomment.FieldMessageID)
+	return u
+}
+
+// SetAuthorKind sets the "author_kind" field.
+func (u *TicketCommentUpsert) SetAuthorKind(v string) *TicketCommentUpsert {
+	u.Set(ticketcomment.FieldAuthorKind, v)
+	return u
+}
+
+// UpdateAuthorKind sets the "author_kind" field to the value that was provided on create.
+func (u *TicketCommentUpsert) UpdateAuthorKind() *TicketCommentUpsert {
+	u.SetExcluded(ticketcomment.FieldAuthorKind)
+	return u
+}
+
+// SetAuthorName sets the "author_name" field.
+func (u *TicketCommentUpsert) SetAuthorName(v string) *TicketCommentUpsert {
+	u.Set(ticketcomment.FieldAuthorName, v)
+	return u
+}
+
+// UpdateAuthorName sets the "author_name" field to the value that was provided on create.
+func (u *TicketCommentUpsert) UpdateAuthorName() *TicketCommentUpsert {
+	u.SetExcluded(ticketcomment.FieldAuthorName)
+	return u
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (u *TicketCommentUpsert) ClearAuthorName() *TicketCommentUpsert {
+	u.SetNull(ticketcomment.FieldAuthorName)
 	return u
 }
 
@@ -708,6 +781,41 @@ func (u *TicketCommentUpsertOne) UpdateMessageID() *TicketCommentUpsertOne {
 func (u *TicketCommentUpsertOne) ClearMessageID() *TicketCommentUpsertOne {
 	return u.Update(func(s *TicketCommentUpsert) {
 		s.ClearMessageID()
+	})
+}
+
+// SetAuthorKind sets the "author_kind" field.
+func (u *TicketCommentUpsertOne) SetAuthorKind(v string) *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.SetAuthorKind(v)
+	})
+}
+
+// UpdateAuthorKind sets the "author_kind" field to the value that was provided on create.
+func (u *TicketCommentUpsertOne) UpdateAuthorKind() *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.UpdateAuthorKind()
+	})
+}
+
+// SetAuthorName sets the "author_name" field.
+func (u *TicketCommentUpsertOne) SetAuthorName(v string) *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.SetAuthorName(v)
+	})
+}
+
+// UpdateAuthorName sets the "author_name" field to the value that was provided on create.
+func (u *TicketCommentUpsertOne) UpdateAuthorName() *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.UpdateAuthorName()
+	})
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (u *TicketCommentUpsertOne) ClearAuthorName() *TicketCommentUpsertOne {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.ClearAuthorName()
 	})
 }
 
@@ -1076,6 +1184,41 @@ func (u *TicketCommentUpsertBulk) UpdateMessageID() *TicketCommentUpsertBulk {
 func (u *TicketCommentUpsertBulk) ClearMessageID() *TicketCommentUpsertBulk {
 	return u.Update(func(s *TicketCommentUpsert) {
 		s.ClearMessageID()
+	})
+}
+
+// SetAuthorKind sets the "author_kind" field.
+func (u *TicketCommentUpsertBulk) SetAuthorKind(v string) *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.SetAuthorKind(v)
+	})
+}
+
+// UpdateAuthorKind sets the "author_kind" field to the value that was provided on create.
+func (u *TicketCommentUpsertBulk) UpdateAuthorKind() *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.UpdateAuthorKind()
+	})
+}
+
+// SetAuthorName sets the "author_name" field.
+func (u *TicketCommentUpsertBulk) SetAuthorName(v string) *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.SetAuthorName(v)
+	})
+}
+
+// UpdateAuthorName sets the "author_name" field to the value that was provided on create.
+func (u *TicketCommentUpsertBulk) UpdateAuthorName() *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.UpdateAuthorName()
+	})
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (u *TicketCommentUpsertBulk) ClearAuthorName() *TicketCommentUpsertBulk {
+	return u.Update(func(s *TicketCommentUpsert) {
+		s.ClearAuthorName()
 	})
 }
 

@@ -115,6 +115,8 @@ func (x *TicketComment) Redact() string {
 	// Safe field: CreateTime
 
 	// Safe field: MessageId
+
+	// Safe field: AuthorKind
 	return x.String()
 }
 

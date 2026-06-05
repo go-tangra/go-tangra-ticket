@@ -2764,6 +2764,8 @@ type TicketCommentMutation struct {
 	addauthor_id  *int32
 	author_email  *string
 	message_id    *string
+	author_kind   *string
+	author_name   *string
 	clearedFields map[string]struct{}
 	ticket        *string
 	clearedticket bool
@@ -3355,6 +3357,91 @@ func (m *TicketCommentMutation) ResetMessageID() {
 	delete(m.clearedFields, ticketcomment.FieldMessageID)
 }
 
+// SetAuthorKind sets the "author_kind" field.
+func (m *TicketCommentMutation) SetAuthorKind(s string) {
+	m.author_kind = &s
+}
+
+// AuthorKind returns the value of the "author_kind" field in the mutation.
+func (m *TicketCommentMutation) AuthorKind() (r string, exists bool) {
+	v := m.author_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthorKind returns the old "author_kind" field's value of the TicketComment entity.
+// If the TicketComment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketCommentMutation) OldAuthorKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthorKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthorKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthorKind: %w", err)
+	}
+	return oldValue.AuthorKind, nil
+}
+
+// ResetAuthorKind resets all changes to the "author_kind" field.
+func (m *TicketCommentMutation) ResetAuthorKind() {
+	m.author_kind = nil
+}
+
+// SetAuthorName sets the "author_name" field.
+func (m *TicketCommentMutation) SetAuthorName(s string) {
+	m.author_name = &s
+}
+
+// AuthorName returns the value of the "author_name" field in the mutation.
+func (m *TicketCommentMutation) AuthorName() (r string, exists bool) {
+	v := m.author_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthorName returns the old "author_name" field's value of the TicketComment entity.
+// If the TicketComment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TicketCommentMutation) OldAuthorName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthorName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthorName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthorName: %w", err)
+	}
+	return oldValue.AuthorName, nil
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (m *TicketCommentMutation) ClearAuthorName() {
+	m.author_name = nil
+	m.clearedFields[ticketcomment.FieldAuthorName] = struct{}{}
+}
+
+// AuthorNameCleared returns if the "author_name" field was cleared in this mutation.
+func (m *TicketCommentMutation) AuthorNameCleared() bool {
+	_, ok := m.clearedFields[ticketcomment.FieldAuthorName]
+	return ok
+}
+
+// ResetAuthorName resets all changes to the "author_name" field.
+func (m *TicketCommentMutation) ResetAuthorName() {
+	m.author_name = nil
+	delete(m.clearedFields, ticketcomment.FieldAuthorName)
+}
+
 // ClearTicket clears the "ticket" edge to the Ticket entity.
 func (m *TicketCommentMutation) ClearTicket() {
 	m.clearedticket = true
@@ -3416,7 +3503,7 @@ func (m *TicketCommentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TicketCommentMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.create_time != nil {
 		fields = append(fields, ticketcomment.FieldCreateTime)
 	}
@@ -3447,6 +3534,12 @@ func (m *TicketCommentMutation) Fields() []string {
 	if m.message_id != nil {
 		fields = append(fields, ticketcomment.FieldMessageID)
 	}
+	if m.author_kind != nil {
+		fields = append(fields, ticketcomment.FieldAuthorKind)
+	}
+	if m.author_name != nil {
+		fields = append(fields, ticketcomment.FieldAuthorName)
+	}
 	return fields
 }
 
@@ -3475,6 +3568,10 @@ func (m *TicketCommentMutation) Field(name string) (ent.Value, bool) {
 		return m.AuthorEmail()
 	case ticketcomment.FieldMessageID:
 		return m.MessageID()
+	case ticketcomment.FieldAuthorKind:
+		return m.AuthorKind()
+	case ticketcomment.FieldAuthorName:
+		return m.AuthorName()
 	}
 	return nil, false
 }
@@ -3504,6 +3601,10 @@ func (m *TicketCommentMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldAuthorEmail(ctx)
 	case ticketcomment.FieldMessageID:
 		return m.OldMessageID(ctx)
+	case ticketcomment.FieldAuthorKind:
+		return m.OldAuthorKind(ctx)
+	case ticketcomment.FieldAuthorName:
+		return m.OldAuthorName(ctx)
 	}
 	return nil, fmt.Errorf("unknown TicketComment field %s", name)
 }
@@ -3583,6 +3684,20 @@ func (m *TicketCommentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetMessageID(v)
 		return nil
+	case ticketcomment.FieldAuthorKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthorKind(v)
+		return nil
+	case ticketcomment.FieldAuthorName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthorName(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TicketComment field %s", name)
 }
@@ -3658,6 +3773,9 @@ func (m *TicketCommentMutation) ClearedFields() []string {
 	if m.FieldCleared(ticketcomment.FieldMessageID) {
 		fields = append(fields, ticketcomment.FieldMessageID)
 	}
+	if m.FieldCleared(ticketcomment.FieldAuthorName) {
+		fields = append(fields, ticketcomment.FieldAuthorName)
+	}
 	return fields
 }
 
@@ -3689,6 +3807,9 @@ func (m *TicketCommentMutation) ClearField(name string) error {
 		return nil
 	case ticketcomment.FieldMessageID:
 		m.ClearMessageID()
+		return nil
+	case ticketcomment.FieldAuthorName:
+		m.ClearAuthorName()
 		return nil
 	}
 	return fmt.Errorf("unknown TicketComment nullable field %s", name)
@@ -3727,6 +3848,12 @@ func (m *TicketCommentMutation) ResetField(name string) error {
 		return nil
 	case ticketcomment.FieldMessageID:
 		m.ResetMessageID()
+		return nil
+	case ticketcomment.FieldAuthorKind:
+		m.ResetAuthorKind()
+		return nil
+	case ticketcomment.FieldAuthorName:
+		m.ResetAuthorName()
 		return nil
 	}
 	return fmt.Errorf("unknown TicketComment field %s", name)

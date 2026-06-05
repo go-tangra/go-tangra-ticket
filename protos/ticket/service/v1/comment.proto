@@ -25,6 +25,8 @@ message TicketComment {
   // message_id is the RFC822 Message-Id of the email this comment was sent or
   // received as (empty for internal notes).
   string message_id = 10 [json_name = "messageId"];
+  // author_kind: agent | requester | system (system = automatic acknowledgement).
+  string author_kind = 11 [json_name = "authorKind"];
 }
 
 service TicketCommentService {

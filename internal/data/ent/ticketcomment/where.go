@@ -115,6 +115,16 @@ func MessageID(v string) predicate.TicketComment {
 	return predicate.TicketComment(sql.FieldEQ(FieldMessageID, v))
 }
 
+// AuthorKind applies equality check predicate on the "author_kind" field. It's identical to AuthorKindEQ.
+func AuthorKind(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldEQ(FieldAuthorKind, v))
+}
+
+// AuthorName applies equality check predicate on the "author_name" field. It's identical to AuthorNameEQ.
+func AuthorName(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldEQ(FieldAuthorName, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.TicketComment {
 	return predicate.TicketComment(sql.FieldEQ(FieldCreateTime, v))
@@ -643,6 +653,146 @@ func MessageIDEqualFold(v string) predicate.TicketComment {
 // MessageIDContainsFold applies the ContainsFold predicate on the "message_id" field.
 func MessageIDContainsFold(v string) predicate.TicketComment {
 	return predicate.TicketComment(sql.FieldContainsFold(FieldMessageID, v))
+}
+
+// AuthorKindEQ applies the EQ predicate on the "author_kind" field.
+func AuthorKindEQ(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldEQ(FieldAuthorKind, v))
+}
+
+// AuthorKindNEQ applies the NEQ predicate on the "author_kind" field.
+func AuthorKindNEQ(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldNEQ(FieldAuthorKind, v))
+}
+
+// AuthorKindIn applies the In predicate on the "author_kind" field.
+func AuthorKindIn(vs ...string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldIn(FieldAuthorKind, vs...))
+}
+
+// AuthorKindNotIn applies the NotIn predicate on the "author_kind" field.
+func AuthorKindNotIn(vs ...string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldNotIn(FieldAuthorKind, vs...))
+}
+
+// AuthorKindGT applies the GT predicate on the "author_kind" field.
+func AuthorKindGT(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldGT(FieldAuthorKind, v))
+}
+
+// AuthorKindGTE applies the GTE predicate on the "author_kind" field.
+func AuthorKindGTE(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldGTE(FieldAuthorKind, v))
+}
+
+// AuthorKindLT applies the LT predicate on the "author_kind" field.
+func AuthorKindLT(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldLT(FieldAuthorKind, v))
+}
+
+// AuthorKindLTE applies the LTE predicate on the "author_kind" field.
+func AuthorKindLTE(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldLTE(FieldAuthorKind, v))
+}
+
+// AuthorKindContains applies the Contains predicate on the "author_kind" field.
+func AuthorKindContains(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldContains(FieldAuthorKind, v))
+}
+
+// AuthorKindHasPrefix applies the HasPrefix predicate on the "author_kind" field.
+func AuthorKindHasPrefix(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldHasPrefix(FieldAuthorKind, v))
+}
+
+// AuthorKindHasSuffix applies the HasSuffix predicate on the "author_kind" field.
+func AuthorKindHasSuffix(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldHasSuffix(FieldAuthorKind, v))
+}
+
+// AuthorKindEqualFold applies the EqualFold predicate on the "author_kind" field.
+func AuthorKindEqualFold(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldEqualFold(FieldAuthorKind, v))
+}
+
+// AuthorKindContainsFold applies the ContainsFold predicate on the "author_kind" field.
+func AuthorKindContainsFold(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldContainsFold(FieldAuthorKind, v))
+}
+
+// AuthorNameEQ applies the EQ predicate on the "author_name" field.
+func AuthorNameEQ(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldEQ(FieldAuthorName, v))
+}
+
+// AuthorNameNEQ applies the NEQ predicate on the "author_name" field.
+func AuthorNameNEQ(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldNEQ(FieldAuthorName, v))
+}
+
+// AuthorNameIn applies the In predicate on the "author_name" field.
+func AuthorNameIn(vs ...string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldIn(FieldAuthorName, vs...))
+}
+
+// AuthorNameNotIn applies the NotIn predicate on the "author_name" field.
+func AuthorNameNotIn(vs ...string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldNotIn(FieldAuthorName, vs...))
+}
+
+// AuthorNameGT applies the GT predicate on the "author_name" field.
+func AuthorNameGT(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldGT(FieldAuthorName, v))
+}
+
+// AuthorNameGTE applies the GTE predicate on the "author_name" field.
+func AuthorNameGTE(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldGTE(FieldAuthorName, v))
+}
+
+// AuthorNameLT applies the LT predicate on the "author_name" field.
+func AuthorNameLT(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldLT(FieldAuthorName, v))
+}
+
+// AuthorNameLTE applies the LTE predicate on the "author_name" field.
+func AuthorNameLTE(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldLTE(FieldAuthorName, v))
+}
+
+// AuthorNameContains applies the Contains predicate on the "author_name" field.
+func AuthorNameContains(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldContains(FieldAuthorName, v))
+}
+
+// AuthorNameHasPrefix applies the HasPrefix predicate on the "author_name" field.
+func AuthorNameHasPrefix(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldHasPrefix(FieldAuthorName, v))
+}
+
+// AuthorNameHasSuffix applies the HasSuffix predicate on the "author_name" field.
+func AuthorNameHasSuffix(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldHasSuffix(FieldAuthorName, v))
+}
+
+// AuthorNameIsNil applies the IsNil predicate on the "author_name" field.
+func AuthorNameIsNil() predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldIsNull(FieldAuthorName))
+}
+
+// AuthorNameNotNil applies the NotNil predicate on the "author_name" field.
+func AuthorNameNotNil() predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldNotNull(FieldAuthorName))
+}
+
+// AuthorNameEqualFold applies the EqualFold predicate on the "author_name" field.
+func AuthorNameEqualFold(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldEqualFold(FieldAuthorName, v))
+}
+
+// AuthorNameContainsFold applies the ContainsFold predicate on the "author_name" field.
+func AuthorNameContainsFold(v string) predicate.TicketComment {
+	return predicate.TicketComment(sql.FieldContainsFold(FieldAuthorName, v))
 }
 
 // HasTicket applies the HasEdge predicate on the "ticket" edge.

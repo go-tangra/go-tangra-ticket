@@ -48,11 +48,13 @@ func (s *CommentService) CreateComment(ctx context.Context, req *ticketpb.Create
 	}
 
 	e, err := s.repo.Create(ctx, data.NewComment{
-		TenantID: tenantID,
-		TicketID: req.TicketId,
-		Body:     req.Body,
-		Internal: req.Internal,
-		AuthorID: getUserID(ctx),
+		TenantID:   tenantID,
+		TicketID:   req.TicketId,
+		Body:       req.Body,
+		Internal:   req.Internal,
+		AuthorID:   getUserID(ctx),
+		AuthorName: getUsername(ctx),
+		AuthorKind: "agent",
 	})
 	if err != nil {
 		return nil, ticketpb.ErrorDatabaseError("failed to create comment")
@@ -138,12 +140,14 @@ func (s *CommentService) ReplyTicket(ctx context.Context, req *ticketpb.ReplyTic
 	}
 
 	e, err := s.repo.Create(ctx, data.NewComment{
-		TenantID:  tenantID,
-		TicketID:  tk.ID,
-		Body:      req.Body,
-		Internal:  false,
-		AuthorID:  getUserID(ctx),
-		MessageID: msgID,
+		TenantID:   tenantID,
+		TicketID:   tk.ID,
+		Body:       req.Body,
+		Internal:   false,
+		AuthorID:   getUserID(ctx),
+		AuthorName: getUsername(ctx),
+		AuthorKind: "agent",
+		MessageID:  msgID,
 	})
 	if err != nil {
 		// The mail went out; surface the failure but don't pretend it didn't send.

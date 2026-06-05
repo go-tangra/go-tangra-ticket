@@ -33,6 +33,10 @@ const (
 	FieldAuthorEmail = "author_email"
 	// FieldMessageID holds the string denoting the message_id field in the database.
 	FieldMessageID = "message_id"
+	// FieldAuthorKind holds the string denoting the author_kind field in the database.
+	FieldAuthorKind = "author_kind"
+	// FieldAuthorName holds the string denoting the author_name field in the database.
+	FieldAuthorName = "author_name"
 	// EdgeTicket holds the string denoting the ticket edge name in mutations.
 	EdgeTicket = "ticket"
 	// Table holds the table name of the ticketcomment in the database.
@@ -59,6 +63,8 @@ var Columns = []string{
 	FieldAuthorID,
 	FieldAuthorEmail,
 	FieldMessageID,
+	FieldAuthorKind,
+	FieldAuthorName,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -89,6 +95,8 @@ var (
 	DefaultInternal bool
 	// DefaultAuthorID holds the default value on creation for the "author_id" field.
 	DefaultAuthorID uint32
+	// DefaultAuthorKind holds the default value on creation for the "author_kind" field.
+	DefaultAuthorKind string
 	// IDValidator is a validator for the "id" field. It is called by the builders before save.
 	IDValidator func(string) error
 )
@@ -149,6 +157,16 @@ func ByAuthorEmail(opts ...sql.OrderTermOption) OrderOption {
 // ByMessageID orders the results by the message_id field.
 func ByMessageID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMessageID, opts...).ToFunc()
+}
+
+// ByAuthorKind orders the results by the author_kind field.
+func ByAuthorKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthorKind, opts...).ToFunc()
+}
+
+// ByAuthorName orders the results by the author_name field.
+func ByAuthorName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthorName, opts...).ToFunc()
 }
 
 // ByTicketField orders the results by ticket field.

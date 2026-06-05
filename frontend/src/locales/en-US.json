@@ -42,6 +42,7 @@
       "sentReply": "sent",
       "incoming": "incoming",
       "systemAuthor": "Auto-reply",
+      "agentAuthor": "Agent",
       "noComments": "No comments yet",
       "assignSuccess": "Ticket assigned",
       "statusSuccess": "Status updated",

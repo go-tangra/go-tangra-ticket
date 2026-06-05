@@ -173,6 +173,40 @@ func (_u *TicketCommentUpdate) ClearMessageID() *TicketCommentUpdate {
 	return _u
 }
 
+// SetAuthorKind sets the "author_kind" field.
+func (_u *TicketCommentUpdate) SetAuthorKind(v string) *TicketCommentUpdate {
+	_u.mutation.SetAuthorKind(v)
+	return _u
+}
+
+// SetNillableAuthorKind sets the "author_kind" field if the given value is not nil.
+func (_u *TicketCommentUpdate) SetNillableAuthorKind(v *string) *TicketCommentUpdate {
+	if v != nil {
+		_u.SetAuthorKind(*v)
+	}
+	return _u
+}
+
+// SetAuthorName sets the "author_name" field.
+func (_u *TicketCommentUpdate) SetAuthorName(v string) *TicketCommentUpdate {
+	_u.mutation.SetAuthorName(v)
+	return _u
+}
+
+// SetNillableAuthorName sets the "author_name" field if the given value is not nil.
+func (_u *TicketCommentUpdate) SetNillableAuthorName(v *string) *TicketCommentUpdate {
+	if v != nil {
+		_u.SetAuthorName(*v)
+	}
+	return _u
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (_u *TicketCommentUpdate) ClearAuthorName() *TicketCommentUpdate {
+	_u.mutation.ClearAuthorName()
+	return _u
+}
+
 // SetTicket sets the "ticket" edge to the Ticket entity.
 func (_u *TicketCommentUpdate) SetTicket(v *Ticket) *TicketCommentUpdate {
 	return _u.SetTicketID(v.ID)
@@ -293,6 +327,15 @@ func (_u *TicketCommentUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.MessageIDCleared() {
 		_spec.ClearField(ticketcomment.FieldMessageID, field.TypeString)
+	}
+	if value, ok := _u.mutation.AuthorKind(); ok {
+		_spec.SetField(ticketcomment.FieldAuthorKind, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AuthorName(); ok {
+		_spec.SetField(ticketcomment.FieldAuthorName, field.TypeString, value)
+	}
+	if _u.mutation.AuthorNameCleared() {
+		_spec.ClearField(ticketcomment.FieldAuthorName, field.TypeString)
 	}
 	if _u.mutation.TicketCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -488,6 +531,40 @@ func (_u *TicketCommentUpdateOne) ClearMessageID() *TicketCommentUpdateOne {
 	return _u
 }
 
+// SetAuthorKind sets the "author_kind" field.
+func (_u *TicketCommentUpdateOne) SetAuthorKind(v string) *TicketCommentUpdateOne {
+	_u.mutation.SetAuthorKind(v)
+	return _u
+}
+
+// SetNillableAuthorKind sets the "author_kind" field if the given value is not nil.
+func (_u *TicketCommentUpdateOne) SetNillableAuthorKind(v *string) *TicketCommentUpdateOne {
+	if v != nil {
+		_u.SetAuthorKind(*v)
+	}
+	return _u
+}
+
+// SetAuthorName sets the "author_name" field.
+func (_u *TicketCommentUpdateOne) SetAuthorName(v string) *TicketCommentUpdateOne {
+	_u.mutation.SetAuthorName(v)
+	return _u
+}
+
+// SetNillableAuthorName sets the "author_name" field if the given value is not nil.
+func (_u *TicketCommentUpdateOne) SetNillableAuthorName(v *string) *TicketCommentUpdateOne {
+	if v != nil {
+		_u.SetAuthorName(*v)
+	}
+	return _u
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (_u *TicketCommentUpdateOne) ClearAuthorName() *TicketCommentUpdateOne {
+	_u.mutation.ClearAuthorName()
+	return _u
+}
+
 // SetTicket sets the "ticket" edge to the Ticket entity.
 func (_u *TicketCommentUpdateOne) SetTicket(v *Ticket) *TicketCommentUpdateOne {
 	return _u.SetTicketID(v.ID)
@@ -638,6 +715,15 @@ func (_u *TicketCommentUpdateOne) sqlSave(ctx context.Context) (_node *TicketCom
 	}
 	if _u.mutation.MessageIDCleared() {
 		_spec.ClearField(ticketcomment.FieldMessageID, field.TypeString)
+	}
+	if value, ok := _u.mutation.AuthorKind(); ok {
+		_spec.SetField(ticketcomment.FieldAuthorKind, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AuthorName(); ok {
+		_spec.SetField(ticketcomment.FieldAuthorName, field.TypeString, value)
+	}
+	if _u.mutation.AuthorNameCleared() {
+		_spec.ClearField(ticketcomment.FieldAuthorName, field.TypeString)
 	}
 	if _u.mutation.TicketCleared() {
 		edge := &sqlgraph.EdgeSpec{

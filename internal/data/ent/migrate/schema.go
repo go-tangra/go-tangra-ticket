@@ -102,6 +102,8 @@ var (
 		{Name: "author_id", Type: field.TypeUint32, Comment: "Internal user author (0 if external)", Default: 0},
 		{Name: "author_email", Type: field.TypeString, Nullable: true, Comment: "External requester email when the reply came by mail"},
 		{Name: "message_id", Type: field.TypeString, Nullable: true, Comment: "RFC822 Message-Id this comment was sent/received as (for threading)"},
+		{Name: "author_kind", Type: field.TypeString, Comment: "Who authored it: agent | requester | system (auto-reply)", Default: "agent"},
+		{Name: "author_name", Type: field.TypeString, Nullable: true, Comment: "Display name captured at creation (agent username or requester name)"},
 		{Name: "ticket_id", Type: field.TypeString, Comment: "Owning ticket UUID"},
 	}
 	// TicketCommentsTable holds the schema information for the "ticket_comments" table.
@@ -112,7 +114,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "ticket_comments_ticket_tickets_comments",
-				Columns:    []*schema.Column{TicketCommentsColumns[10]},
+				Columns:    []*schema.Column{TicketCommentsColumns[12]},
 				RefColumns: []*schema.Column{TicketTicketsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -126,7 +128,7 @@ var (
 			{
 				Name:    "ticketcomment_ticket_id",
 				Unique:  false,
-				Columns: []*schema.Column{TicketCommentsColumns[10]},
+				Columns: []*schema.Column{TicketCommentsColumns[12]},
 			},
 			{
 				Name:    "ticketcomment_tenant_id_message_id",

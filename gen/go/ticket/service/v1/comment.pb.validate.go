@@ -104,6 +104,8 @@ func (m *TicketComment) validate(all bool) error {
 
 	// no validation rules for MessageId
 
+	// no validation rules for AuthorKind
+
 	if len(errors) > 0 {
 		return TicketCommentMultiError(errors)
 	}

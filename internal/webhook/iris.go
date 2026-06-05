@@ -239,12 +239,13 @@ func (h *IrisHandler) sendAutoReply(ctx context.Context, tk *ent.Ticket, pm pars
 	// Record the auto-reply as a public comment (author 0 = system) so a reply
 	// to it can be threaded via its message-id.
 	if _, err := h.comments.Create(ctx, data.NewComment{
-		TenantID:  h.tenantID,
-		TicketID:  tk.ID,
-		Body:      body,
-		Internal:  false,
-		AuthorID:  0,
-		MessageID: msgID,
+		TenantID:   h.tenantID,
+		TicketID:   tk.ID,
+		Body:       body,
+		Internal:   false,
+		AuthorID:   0,
+		AuthorKind: "system",
+		MessageID:  msgID,
 	}); err != nil {
 		h.log.Warnf("iris webhook: record auto-reply comment for ticket %s failed: %v", tk.ID, err)
 	}
@@ -309,13 +310,14 @@ func (h *IrisHandler) appendReply(ctx context.Context, ticketID string, pm parse
 	if body == "" {
 		body = "(empty message)"
 	}
-	_ = fromName
 	if _, err := h.comments.Create(ctx, data.NewComment{
 		TenantID:    h.tenantID,
 		TicketID:    ticketID,
 		Body:        body,
 		Internal:    false,
 		AuthorEmail: fromEmail,
+		AuthorName:  fromName,
+		AuthorKind:  "requester",
 		MessageID:   pm.messageID,
 	}); err != nil {
 		h.log.Errorf("iris webhook: append reply to %s failed: %v", ticketID, err)

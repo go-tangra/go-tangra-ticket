@@ -143,24 +143,22 @@ async function postComment() {
   }
 }
 
-// A comment that carries a message id and was written by an internal user is
-// an emailed reply; one with an author_email came in from the requester.
+// Channel of a comment: incoming from the requester, outbound (agent reply or
+// system auto-reply), or none (internal note).
 function commentChannel(c: TicketComment): '' | 'in' | 'out' {
   if (c.internal) return '';
-  if (c.authorEmail) return 'in';
-  if (c.messageId) return 'out';
+  if (c.authorKind === 'requester' || c.authorEmail) return 'in';
+  if (c.authorKind === 'system' || c.messageId) return 'out';
   return '';
 }
 
-// Display name for a comment author. A public, system-authored (author 0) mail
-// is the automatic acknowledgement.
+// Display name for a comment author, driven by author_kind.
 function commentAuthor(c: TicketComment): string {
+  if (c.authorKind === 'system') return $t('ticket.page.ticket.systemAuthor');
   if (c.authorName) return c.authorName;
   if (c.authorEmail) return c.authorEmail;
-  if (!c.internal && !c.authorId && c.messageId) {
-    return $t('ticket.page.ticket.systemAuthor');
-  }
-  return `#${c.authorId}`;
+  if (c.authorId) return `#${c.authorId}`;
+  return $t('ticket.page.ticket.agentAuthor');
 }
 
 const composerModeOptions = [

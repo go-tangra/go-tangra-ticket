@@ -46,6 +46,12 @@ func (TicketComment) Fields() []ent.Field {
 		field.String("message_id").
 			Optional().
 			Comment("RFC822 Message-Id this comment was sent/received as (for threading)"),
+		field.String("author_kind").
+			Default("agent").
+			Comment("Who authored it: agent | requester | system (auto-reply)"),
+		field.String("author_name").
+			Optional().
+			Comment("Display name captured at creation (agent username or requester name)"),
 	}
 }
 
