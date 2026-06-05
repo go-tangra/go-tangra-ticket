@@ -61,7 +61,7 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	irisHandler := webhook.NewIrisHandler(context, ticketRepo, commentRepo, attachmentRepo, storageClient, tagRepo, ruleRepo, engine, collector)
+	irisHandler := webhook.NewIrisHandler(context, ticketRepo, commentRepo, attachmentRepo, storageClient, tagRepo, ruleRepo, engine, mailerMailer, collector)
 	httpServer := server.NewHTTPServer(context, irisHandler, attachmentRepo, storageClient)
 	registrationClient, err := data.NewRegistrationClient(context)
 	if err != nil {

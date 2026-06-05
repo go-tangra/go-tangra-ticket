@@ -38,12 +38,46 @@ type parsedMail struct {
 	subject     string
 	fromName    string
 	fromEmail   string
-	messageID   string
-	inReplyTo   string   // In-Reply-To message-id (no angle brackets)
-	references  []string // References chain message-ids (no angle brackets)
-	text        string   // plain text (text/plain preferred, else HTML->text)
-	html        string   // raw HTML body, if the email had one
-	attachments []mailAttachment
+	messageID     string
+	inReplyTo     string   // In-Reply-To message-id (no angle brackets)
+	references    []string // References chain message-ids (no angle brackets)
+	autoSubmitted string   // Auto-Submitted header, lowercased
+	precedence    string   // Precedence header, lowercased
+	text          string   // plain text (text/plain preferred, else HTML->text)
+	html          string   // raw HTML body, if the email had one
+	attachments   []mailAttachment
+}
+
+// isAuto reports whether the message is itself an automated/bulk message, so
+// we must NOT auto-reply to it (RFC 3834 — prevents mail loops).
+func (p parsedMail) isAuto() bool {
+	if p.autoSubmitted != "" && p.autoSubmitted != "no" {
+		return true
+	}
+	switch p.precedence {
+	case "bulk", "list", "junk", "auto_reply":
+		return true
+	}
+	return false
+}
+
+// isDaemonSender reports whether the From looks like a non-human/no-reply
+// address we should never auto-reply to (another loop guard).
+func isDaemonSender(from string) bool {
+	f := strings.ToLower(strings.TrimSpace(from))
+	if f == "" {
+		return true
+	}
+	local := f
+	if i := strings.Index(f, "@"); i >= 0 {
+		local = f[:i]
+	}
+	for _, bad := range []string{"mailer-daemon", "postmaster", "no-reply", "noreply", "do-not-reply", "donotreply", "autoreply", "auto-reply", "bounce"} {
+		if strings.Contains(local, bad) {
+			return true
+		}
+	}
+	return false
 }
 
 // messageIDList splits a header value containing zero or more <id> tokens
@@ -76,6 +110,8 @@ func parseMail(raw []byte) parsedMail {
 	out.messageID = strings.Trim(msg.Header.Get("Message-Id"), "<>")
 	out.inReplyTo = strings.Trim(msg.Header.Get("In-Reply-To"), "<> \t")
 	out.references = messageIDList(msg.Header.Get("References"))
+	out.autoSubmitted = strings.ToLower(strings.TrimSpace(msg.Header.Get("Auto-Submitted")))
+	out.precedence = strings.ToLower(strings.TrimSpace(msg.Header.Get("Precedence")))
 	if addr, e := mail.ParseAddress(msg.Header.Get("From")); e == nil {
 		out.fromEmail = addr.Address
 		out.fromName, _ = dec.DecodeHeader(addr.Name)

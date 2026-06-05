@@ -41,6 +41,7 @@
       "noRequesterEmail": "This ticket has no requester email to reply to",
       "sentReply": "sent",
       "incoming": "incoming",
+      "systemAuthor": "Auto-reply",
       "noComments": "No comments yet",
       "assignSuccess": "Ticket assigned",
       "statusSuccess": "Status updated",

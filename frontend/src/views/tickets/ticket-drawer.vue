@@ -152,6 +152,17 @@ function commentChannel(c: TicketComment): '' | 'in' | 'out' {
   return '';
 }
 
+// Display name for a comment author. A public, system-authored (author 0) mail
+// is the automatic acknowledgement.
+function commentAuthor(c: TicketComment): string {
+  if (c.authorName) return c.authorName;
+  if (c.authorEmail) return c.authorEmail;
+  if (!c.internal && !c.authorId && c.messageId) {
+    return $t('ticket.page.ticket.systemAuthor');
+  }
+  return `#${c.authorId}`;
+}
+
 const composerModeOptions = [
   { label: $t('ticket.page.ticket.reply'), value: 'reply' },
   { label: $t('ticket.page.ticket.internalNote'), value: 'internal' },
@@ -326,7 +337,7 @@ async function saveTags() {
             style="border-left: 3px solid var(--border, #e5e7eb); padding: 4px 0 4px 10px; margin-bottom: 10px"
           >
             <div style="font-size: 12px; color: #888">
-              <b>{{ c.authorName || c.authorEmail || ('#' + c.authorId) }}</b>
+              <b>{{ commentAuthor(c) }}</b>
               · {{ c.createTime ? new Date(c.createTime).toLocaleString() : '' }}
               <Tag v-if="c.internal" color="orange" style="margin-left: 6px">
                 {{ $t('ticket.page.ticket.internalNote') }}

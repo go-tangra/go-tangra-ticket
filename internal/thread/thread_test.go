@@ -24,19 +24,30 @@ func TestParseToken(t *testing.T) {
 }
 
 func TestReplySubject(t *testing.T) {
+	got := ReplySubject("Printer broken")
+	if got != "Re: Printer broken" {
+		t.Fatalf("want %q, got %q", "Re: Printer broken", got)
+	}
+	// No token is added to the subject any more.
+	if ParseToken(got) != "" {
+		t.Fatalf("subject must not carry a token: %q", got)
+	}
+	// Existing Re: is not doubled.
+	if again := ReplySubject(got); again != got {
+		t.Fatalf("Re: doubled: %q", again)
+	}
+}
+
+func TestAppendReference(t *testing.T) {
 	id := "550e8400-e29b-41d4-a716-446655440000"
 
-	got := ReplySubject("Printer broken", id)
-	if ParseToken(got) != id {
-		t.Fatalf("token missing in %q", got)
+	body := "Thanks for reaching out, we are on it."
+	out := AppendReference(body, id)
+	if ParseToken(out) != id {
+		t.Fatalf("reference token missing from body: %q", out)
 	}
-	if got[:4] != "Re: " {
-		t.Fatalf("missing Re prefix: %q", got)
-	}
-
-	// Idempotent: replying to an already-tagged Re: subject adds nothing.
-	again := ReplySubject(got, id)
-	if again != got {
-		t.Fatalf("ReplySubject not idempotent: %q -> %q", got, again)
+	// Idempotent: don't append twice if the token is already present.
+	if again := AppendReference(out, id); again != out {
+		t.Fatalf("reference appended twice:\n%q", again)
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/go-tangra/go-tangra-common/viewer"
 	"github.com/go-tangra/go-tangra-ticket/internal/data"
 	"github.com/go-tangra/go-tangra-ticket/internal/data/ent"
+	"github.com/go-tangra/go-tangra-ticket/internal/mailer"
 	"github.com/go-tangra/go-tangra-ticket/internal/metrics"
 	"github.com/go-tangra/go-tangra-ticket/internal/rules"
 	"github.com/go-tangra/go-tangra-ticket/internal/thread"
@@ -37,15 +38,17 @@ type IrisHandler struct {
 	comments *data.CommentRepo
 	attach   *data.AttachmentRepo
 	storage  *data.StorageClient
-	tags     *data.TagRepo
-	ruleRepo *data.RuleRepo
-	engine   *rules.Engine
-	metrics  *metrics.Collector
-	token    string
-	tenantID uint32
+	tags      *data.TagRepo
+	ruleRepo  *data.RuleRepo
+	engine    *rules.Engine
+	mail      *mailer.Mailer
+	metrics   *metrics.Collector
+	token     string
+	tenantID  uint32
+	autoReply bool
 }
 
-func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, comments *data.CommentRepo, attach *data.AttachmentRepo, storage *data.StorageClient, tags *data.TagRepo, ruleRepo *data.RuleRepo, engine *rules.Engine, m *metrics.Collector) *IrisHandler {
+func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, comments *data.CommentRepo, attach *data.AttachmentRepo, storage *data.StorageClient, tags *data.TagRepo, ruleRepo *data.RuleRepo, engine *rules.Engine, mail *mailer.Mailer, m *metrics.Collector) *IrisHandler {
 	tid := uint32(0)
 	if v := os.Getenv("TICKET_DEFAULT_TENANT"); v != "" {
 		if n, err := strconv.ParseUint(v, 10, 32); err == nil {
@@ -53,17 +56,19 @@ func NewIrisHandler(ctx *bootstrap.Context, repo *data.TicketRepo, comments *dat
 		}
 	}
 	h := &IrisHandler{
-		log:      ctx.NewLoggerHelper("ticket/webhook/iris"),
-		repo:     repo,
-		comments: comments,
-		attach:   attach,
-		storage:  storage,
-		tags:     tags,
-		ruleRepo: ruleRepo,
-		engine:   engine,
-		metrics:  m,
-		token:    os.Getenv("TICKET_WEBHOOK_TOKEN"),
-		tenantID: tid,
+		log:       ctx.NewLoggerHelper("ticket/webhook/iris"),
+		repo:      repo,
+		comments:  comments,
+		attach:    attach,
+		storage:   storage,
+		tags:      tags,
+		ruleRepo:  ruleRepo,
+		engine:    engine,
+		mail:      mail,
+		metrics:   m,
+		token:     os.Getenv("TICKET_WEBHOOK_TOKEN"),
+		tenantID:  tid,
+		autoReply: os.Getenv("TICKET_AUTOREPLY") != "off",
 	}
 	if h.token == "" {
 		h.log.Warn("TICKET_WEBHOOK_TOKEN is not set; the iris webhook is UNAUTHENTICATED — set it in production")
@@ -170,9 +175,98 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	h.storeAttachments(ctx, e.ID, pm.attachments)
 	h.applyRules(ctx, e.ID, pm, recipient, len(pm.attachments) > 0)
+	h.sendAutoReply(ctx, e, pm)
 
 	h.log.Infof("iris webhook: created ticket %s from %q (subject=%q, attachments=%d)", e.ID, fromEmail, subject, len(pm.attachments))
 	writeOK(w)
+}
+
+// sendAutoReply emails the requester an acknowledgement when a new ticket is
+// created, embedding the request reference in the BODY. It records the message
+// as a public comment so a reply to it threads back. Heavily guarded against
+// mail loops (RFC 3834): never replies to auto/bulk mail or daemon senders.
+func (h *IrisHandler) sendAutoReply(ctx context.Context, tk *ent.Ticket, pm parsedMail) {
+	if !h.autoReply || h.mail == nil || !h.mail.Enabled() || h.comments == nil {
+		return
+	}
+	if tk.RequesterEmail == "" || isDaemonSender(tk.RequesterEmail) {
+		return
+	}
+	if pm.isAuto() {
+		h.log.Infof("iris webhook: skip auto-reply for ticket %s (incoming is auto/bulk)", tk.ID)
+		return
+	}
+
+	from := tk.Recipient
+	if from == "" {
+		from = h.mail.DefaultFrom()
+	}
+	if from == "" {
+		h.log.Warnf("iris webhook: no From for auto-reply on ticket %s; skipped", tk.ID)
+		return
+	}
+	// Never auto-reply to ourselves: if the requester is the support address
+	// (forwarding loop, misconfig, test mail), From==To would risk a loop.
+	if strings.EqualFold(tk.RequesterEmail, from) || strings.EqualFold(tk.RequesterEmail, h.mail.DefaultFrom()) {
+		h.log.Infof("iris webhook: skip auto-reply for ticket %s (requester is the support address)", tk.ID)
+		return
+	}
+
+	body := autoReplyBody(tk.RequesterName)
+	body = thread.AppendReference(body, tk.ID)
+	msgID := h.mail.GenMessageID(tk.ID, from)
+
+	var refs []string
+	if tk.ExternalID != "" {
+		refs = append(refs, tk.ExternalID)
+	}
+
+	if err := h.mail.Send(ctx, mailer.OutMail{
+		From:          from,
+		To:            tk.RequesterEmail,
+		ToName:        tk.RequesterName,
+		Subject:       thread.ReplySubject(tk.Subject),
+		Text:          body,
+		MessageID:     msgID,
+		InReplyTo:     tk.ExternalID,
+		References:    refs,
+		AutoSubmitted: true,
+	}); err != nil {
+		h.log.Warnf("iris webhook: auto-reply for ticket %s failed: %v", tk.ID, err)
+		return
+	}
+
+	// Record the auto-reply as a public comment (author 0 = system) so a reply
+	// to it can be threaded via its message-id.
+	if _, err := h.comments.Create(ctx, data.NewComment{
+		TenantID:  h.tenantID,
+		TicketID:  tk.ID,
+		Body:      body,
+		Internal:  false,
+		AuthorID:  0,
+		MessageID: msgID,
+	}); err != nil {
+		h.log.Warnf("iris webhook: record auto-reply comment for ticket %s failed: %v", tk.ID, err)
+	}
+	h.log.Infof("iris webhook: auto-reply sent for ticket %s to %q", tk.ID, tk.RequesterEmail)
+}
+
+// autoReplyBody builds the acknowledgement text. A custom template may be set
+// via TICKET_AUTOREPLY_BODY ({{name}} is substituted); the reference line is
+// appended separately so the identifier is always present.
+func autoReplyBody(requesterName string) string {
+	name := strings.TrimSpace(requesterName)
+	if tmpl := os.Getenv("TICKET_AUTOREPLY_BODY"); tmpl != "" {
+		return strings.ReplaceAll(tmpl, "{{name}}", name)
+	}
+	greeting := "Hello"
+	if name != "" {
+		greeting = "Hello " + name
+	}
+	return greeting + ",\n\n" +
+		"Thank you for contacting support. We have received your request and " +
+		"our team will get back to you as soon as possible.\n\n" +
+		"You can simply reply to this email to add more information."
 }
 
 // findThreadTicket resolves an inbound reply to its ticket: first by the
@@ -195,8 +289,12 @@ func (h *IrisHandler) findThreadTicket(ctx context.Context, pm parsedMail, subje
 			return t.ID
 		}
 	}
-	// (3) subject token [#<id>].
-	if id := thread.ParseToken(subject); id != "" {
+	// (3) reference token [#<id>] in the body (preferred) or subject (legacy).
+	id := thread.ParseToken(pm.text)
+	if id == "" {
+		id = thread.ParseToken(subject)
+	}
+	if id != "" {
 		if t, _ := h.repo.Get(ctx, h.tenantID, id); t != nil {
 			return t.ID
 		}

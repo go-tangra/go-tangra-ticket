@@ -48,6 +48,9 @@ type OutMail struct {
 	MessageID  string   // bare id (no angle brackets)
 	InReplyTo  string   // bare id (no angle brackets)
 	References []string // bare ids (no angle brackets)
+	// AutoSubmitted marks the message as an automatic reply (RFC 3834) so
+	// downstream auto-responders don't loop on it.
+	AutoSubmitted bool
 }
 
 func NewMailer(ctx *bootstrap.Context) *Mailer {
@@ -143,6 +146,10 @@ func (m *Mailer) Send(ctx context.Context, o OutMail) error {
 			refs = append(refs, "<"+r+">")
 		}
 		msg.SetGenHeader(gomail.Header("References"), strings.Join(refs, " "))
+	}
+	if o.AutoSubmitted {
+		msg.SetGenHeader(gomail.Header("Auto-Submitted"), "auto-replied")
+		msg.SetGenHeader(gomail.Header("Precedence"), "auto_reply")
 	}
 	msg.SetBodyString(gomail.TypeTextPlain, o.Text)
 
