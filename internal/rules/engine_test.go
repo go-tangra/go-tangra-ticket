@@ -133,6 +133,55 @@ func TestQuoteEscaping(t *testing.T) {
 	}
 }
 
+func TestSpamScoreAndDomain(t *testing.T) {
+	e := mustEngine(t)
+	mail := Email{From: "x@spammer.io", FromDomain: "spammer.io", SpamScore: 7.5}
+
+	cases := []struct {
+		name  string
+		match string
+		conds []Condition
+		want  bool
+	}{
+		{"spam gt threshold", "ALL", []Condition{{Field: "spamScore", Operator: "gt", Value: "5"}}, true},
+		{"spam gte exact", "ALL", []Condition{{Field: "spamScore", Operator: "gte", Value: "7.5"}}, true},
+		{"spam lt false", "ALL", []Condition{{Field: "spamScore", Operator: "lt", Value: "5"}}, false},
+		{"spam float value", "ALL", []Condition{{Field: "spamScore", Operator: "gt", Value: "7.49"}}, true},
+		{"domain equals", "ALL", []Condition{{Field: "fromDomain", Operator: "equals", Value: "Spammer.io"}}, true},
+		{"domain ends_with", "ALL", []Condition{{Field: "fromDomain", Operator: "ends_with", Value: ".io"}}, true},
+		{"domain + spam AND", "ALL", []Condition{
+			{Field: "fromDomain", Operator: "equals", Value: "spammer.io"},
+			{Field: "spamScore", Operator: "gte", Value: "7"},
+		}, true},
+		{"invalid spam value drops condition -> false", "ALL", []Condition{{Field: "spamScore", Operator: "gt", Value: "abc"}}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			expr := BuildExpression(tc.match, tc.conds)
+			if err := e.Validate(expr); err != nil {
+				t.Fatalf("Validate(%q): %v", expr, err)
+			}
+			got, err := e.Eval(expr, mail)
+			if err != nil {
+				t.Fatalf("Eval(%q): %v", expr, err)
+			}
+			if got != tc.want {
+				t.Fatalf("expr=%q got=%v want=%v", expr, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSpamScoreDefaultZero(t *testing.T) {
+	e := mustEngine(t)
+	// No X-Spam-Score -> 0; "> 5" must not match.
+	expr := BuildExpression("ALL", []Condition{{Field: "spamScore", Operator: "gt", Value: "5"}})
+	ok, err := e.Eval(expr, Email{})
+	if err != nil || ok {
+		t.Fatalf("zero spam score should not exceed 5: ok=%v err=%v", ok, err)
+	}
+}
+
 func TestHasAttachmentsEval(t *testing.T) {
 	e := mustEngine(t)
 	expr := BuildExpression("ALL", []Condition{{Field: "hasAttachments", Value: "true"}})

@@ -35,7 +35,9 @@ import {
   booleanValueOptions,
   fieldLabel,
   fieldOptions,
+  isNumericField,
   matchOptions,
+  numericOperatorOptions,
   operatorLabel,
   operatorOptions,
   tagKindOptions,
@@ -113,10 +115,24 @@ function isBoolean(field?: string): boolean {
   return !!field && booleanFields.has(field);
 }
 
+function isNumeric(field?: string): boolean {
+  return isNumericField(field);
+}
+
 function onFieldChange(cond: RuleCondition) {
-  // Switching to a boolean field seeds a sensible default value.
+  // Seed sensible operator/value defaults for the field's type.
   if (isBoolean(cond.field)) {
     if (cond.value !== 'true' && cond.value !== 'false') cond.value = 'true';
+  } else if (isNumeric(cond.field)) {
+    if (!numericOperatorOptions.some((o) => o.value === cond.operator)) {
+      cond.operator = 'gt';
+    }
+    if (cond.value === '' || Number.isNaN(Number(cond.value))) cond.value = '0';
+  } else {
+    // string field
+    if (!operatorOptions.some((o) => o.value === cond.operator)) {
+      cond.operator = 'contains';
+    }
   }
 }
 
@@ -190,6 +206,8 @@ function cleanActions(): RuleAction[] {
       if (a.status) out.push({ type: 'status', status: a.status });
     } else if (a.type === 'priority') {
       if (a.priority) out.push({ type: 'priority', priority: a.priority });
+    } else if (a.type === 'drop') {
+      out.push({ type: 'drop' });
     }
   }
   return out;
@@ -278,6 +296,9 @@ function conditionText(c: RuleCondition): string {
   if (isBoolean(c.field)) {
     return `${fieldLabel(c.field)} = ${c.value === 'false' ? 'No' : 'Yes'}`;
   }
+  if (isNumeric(c.field)) {
+    return `${fieldLabel(c.field)} ${operatorLabel(c.operator)} ${c.value}`;
+  }
   return `${fieldLabel(c.field)} ${operatorLabel(c.operator)} "${c.value}"`;
 }
 
@@ -298,6 +319,8 @@ function actionText(a: RuleAction): string {
       return `${$t('ticket.page.rule.actionStatus')}: ${humanizeEnum(a.status)}`;
     case 'priority':
       return `${$t('ticket.page.rule.actionPriority')}: ${humanizeEnum(a.priority)}`;
+    case 'drop':
+      return $t('ticket.page.rule.actionDrop');
     default:
       return a.type ?? '';
   }
@@ -417,6 +440,20 @@ onMounted(() => {
                 style="width: 360px"
               />
             </template>
+            <template v-else-if="isNumeric(cond.field)">
+              <Select
+                v-model:value="cond.operator"
+                :options="numericOperatorOptions"
+                style="width: 200px"
+              />
+              <InputNumber
+                v-model:value="cond.value"
+                :step="0.1"
+                string-mode
+                :placeholder="$t('ticket.page.rule.value')"
+                style="flex: 1"
+              />
+            </template>
             <template v-else>
               <Select
                 v-model:value="cond.operator"
@@ -503,6 +540,13 @@ onMounted(() => {
                 :options="priorityOptions"
                 style="flex: 1"
               />
+            </template>
+
+            <!-- drop: no params -->
+            <template v-else-if="act.type === 'drop'">
+              <span style="flex: 1; color: #c0392b; font-size: 12px">
+                {{ $t('ticket.page.rule.dropHint') }}
+              </span>
             </template>
 
             <Button

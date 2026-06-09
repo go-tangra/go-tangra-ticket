@@ -42,7 +42,7 @@ menus:
   - id: ticket-rules
     parent_id: ticket
     type: MENU
-    name: Auto-Tag Rules
+    name: Rules
     path: rules
     component: app/ticket/rules/index.vue
     icon: lucide:filter

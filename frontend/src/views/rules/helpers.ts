@@ -6,25 +6,44 @@ export const fieldOptions: { value: string; label: string }[] = [
   { value: 'body', label: 'Body' },
   { value: 'from', label: 'Sender email' },
   { value: 'fromName', label: 'Sender name' },
+  { value: 'fromDomain', label: 'Sender domain' },
   { value: 'recipient', label: 'Recipient' },
   { value: 'hasAttachments', label: 'Has attachments' },
+  { value: 'spamScore', label: 'Spam score' },
 ];
 
 // Boolean fields render a yes/no value instead of operator + text.
 export const booleanFields = new Set(['hasAttachments']);
+
+// Numeric fields use numeric operators and a number value.
+export const numericFields = new Set(['spamScore']);
 
 export const booleanValueOptions: { value: string; label: string }[] = [
   { value: 'true', label: 'Yes' },
   { value: 'false', label: 'No' },
 ];
 
-// "Then apply" action types.
+export const numericOperatorOptions: { value: string; label: string }[] = [
+  { value: 'gt', label: 'greater than (>)' },
+  { value: 'gte', label: 'greater or equal (≥)' },
+  { value: 'lt', label: 'less than (<)' },
+  { value: 'lte', label: 'less or equal (≤)' },
+  { value: 'eq', label: 'equals (=)' },
+  { value: 'neq', label: 'not equals (≠)' },
+];
+
+// "Then apply" action types. "drop" discards the email (no ticket created).
 export const actionTypeOptions: { value: string; label: string }[] = [
   { value: 'tag', label: 'Add tags' },
   { value: 'assign', label: 'Assign to user' },
   { value: 'status', label: 'Set status' },
   { value: 'priority', label: 'Set priority' },
+  { value: 'drop', label: 'Drop (discard email)' },
 ];
+
+export function isNumericField(field?: string): boolean {
+  return !!field && numericFields.has(field);
+}
 
 export const operatorOptions: { value: string; label: string }[] = [
   { value: 'contains', label: 'contains' },
@@ -51,7 +70,12 @@ export function fieldLabel(v?: string): string {
 }
 
 export function operatorLabel(v?: string): string {
-  return operatorOptions.find((o) => o.value === v)?.label ?? v ?? '';
+  return (
+    operatorOptions.find((o) => o.value === v)?.label ??
+    numericOperatorOptions.find((o) => o.value === v)?.label ??
+    v ??
+    ''
+  );
 }
 
 // Deterministic fallback colour for a tag with no explicit colour.

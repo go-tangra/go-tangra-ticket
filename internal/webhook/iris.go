@@ -153,6 +153,17 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Evaluate auto-tag rules BEFORE creating the ticket so a matching "drop"
+	// rule (spam, unwanted sender domain, high spam score) can discard the
+	// message without ever opening a ticket.
+	email := h.ruleEmail(pm, recipient)
+	drop, matched := h.evaluateRules(ctx, email)
+	if drop {
+		h.log.Infof("iris webhook: dropped message from %q (subject=%q, spam=%.2f) by rule", fromEmail, subject, pm.spamScore)
+		writeOK(w)
+		return
+	}
+
 	e, err := h.repo.Create(ctx, data.NewTicket{
 		TenantID:       h.tenantID,
 		ExternalID:     externalID,
@@ -174,11 +185,34 @@ func (h *IrisHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.storeAttachments(ctx, e.ID, pm.attachments)
-	h.applyRules(ctx, e.ID, pm, recipient, len(pm.attachments) > 0)
+	h.applyMatchedRules(ctx, e.ID, matched)
 	h.sendAutoReply(ctx, e, pm)
 
 	h.log.Infof("iris webhook: created ticket %s from %q (subject=%q, attachments=%d)", e.ID, fromEmail, subject, len(pm.attachments))
 	writeOK(w)
+}
+
+// ruleEmail builds the rule-evaluation input from a parsed mail.
+func (h *IrisHandler) ruleEmail(pm parsedMail, recipient string) rules.Email {
+	return rules.Email{
+		Subject:        pm.subject,
+		Body:           pm.text,
+		From:           pm.fromEmail,
+		FromName:       pm.fromName,
+		Recipient:      recipient,
+		FromDomain:     emailDomain(pm.fromEmail),
+		HasAttachments: len(pm.attachments) > 0,
+		SpamScore:      pm.spamScore,
+	}
+}
+
+// emailDomain extracts the domain part of an address (lowercased).
+func emailDomain(addr string) string {
+	addr = strings.ToLower(strings.TrimSpace(addr))
+	if i := strings.LastIndex(addr, "@"); i >= 0 && i < len(addr)-1 {
+		return addr[i+1:]
+	}
+	return ""
 }
 
 // sendAutoReply emails the requester an acknowledgement when a new ticket is
@@ -334,42 +368,34 @@ func (h *IrisHandler) appendReply(ctx context.Context, ticketID string, pm parse
 	}
 }
 
-// applyRules evaluates enabled auto-tagging rules against the parsed email and
-// applies each matching rule's actions (tag / assign / status / priority).
-// Tags are unioned across all matching rules; for assign/status/priority the
-// first matching rule that specifies one wins. Best-effort.
-func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsedMail, recipient string, hasAttachments bool) {
-	if h.ruleRepo == nil || h.tags == nil || h.engine == nil {
-		return
+// effectiveExpr returns the CEL expression for a rule (raw expression override,
+// else compiled from its structured conditions).
+func (h *IrisHandler) effectiveExpr(r *ent.TicketRule) string {
+	if r.Expression != "" {
+		return r.Expression
+	}
+	var conds []rules.Condition
+	if r.Conditions != "" {
+		_ = json.Unmarshal([]byte(r.Conditions), &conds)
+	}
+	return rules.BuildExpression(r.Match, conds)
+}
+
+// evaluateRules evaluates enabled rules against the email and returns whether
+// the message should be dropped (a matched rule carries a "drop" action) and
+// the list of matched rules (for action application after the ticket is made).
+func (h *IrisHandler) evaluateRules(ctx context.Context, email rules.Email) (bool, []*ent.TicketRule) {
+	if h.ruleRepo == nil || h.engine == nil {
+		return false, nil
 	}
 	rls, err := h.ruleRepo.ListEnabled(ctx, h.tenantID)
 	if err != nil || len(rls) == 0 {
-		return
+		return false, nil
 	}
-	email := rules.Email{
-		Subject:        pm.subject,
-		Body:           pm.text,
-		From:           pm.fromEmail,
-		FromName:       pm.fromName,
-		Recipient:      recipient,
-		HasAttachments: hasAttachments,
-	}
-
-	seen := map[string]bool{}
-	var tagIDs []string
-	var assignee *uint32
-	var status, priority string
-
+	drop := false
+	var matched []*ent.TicketRule
 	for _, r := range rls {
-		expr := r.Expression
-		if expr == "" {
-			var conds []rules.Condition
-			if r.Conditions != "" {
-				_ = json.Unmarshal([]byte(r.Conditions), &conds)
-			}
-			expr = rules.BuildExpression(r.Match, conds)
-		}
-		ok, eerr := h.engine.Eval(expr, email)
+		ok, eerr := h.engine.Eval(h.effectiveExpr(r), email)
 		if eerr != nil {
 			h.log.Warnf("iris webhook: rule %q eval failed: %v", r.Name, eerr)
 			continue
@@ -377,7 +403,30 @@ func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsed
 		if !ok {
 			continue
 		}
+		matched = append(matched, r)
+		for _, a := range h.ruleActions(r) {
+			if a.Type == "drop" {
+				drop = true
+				h.log.Infof("iris webhook: rule %q matched with drop action", r.Name)
+			}
+		}
+	}
+	return drop, matched
+}
 
+// applyMatchedRules applies the non-drop actions of already-matched rules to a
+// created ticket. Tags are unioned across rules; assign/status/priority use the
+// first matching rule that sets one. Best-effort.
+func (h *IrisHandler) applyMatchedRules(ctx context.Context, ticketID string, matched []*ent.TicketRule) {
+	if h.tags == nil || len(matched) == 0 {
+		return
+	}
+	seen := map[string]bool{}
+	var tagIDs []string
+	var assignee *uint32
+	var status, priority string
+
+	for _, r := range matched {
 		for _, a := range h.ruleActions(r) {
 			switch a.Type {
 			case "tag", "":
@@ -407,7 +456,7 @@ func (h *IrisHandler) applyRules(ctx context.Context, ticketID string, pm parsed
 				}
 			}
 		}
-		h.log.Infof("iris webhook: rule %q matched ticket %s", r.Name, ticketID)
+		h.log.Infof("iris webhook: rule %q applied to ticket %s", r.Name, ticketID)
 	}
 
 	if len(tagIDs) > 0 {

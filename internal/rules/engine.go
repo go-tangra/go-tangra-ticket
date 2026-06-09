@@ -5,6 +5,7 @@
 package rules
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/google/cel-go/cel"
@@ -13,14 +14,14 @@ import (
 
 // Condition is one row of the rule builder.
 type Condition struct {
-	Field    string `json:"field"`    // subject | body | from | fromName | recipient | hasAttachments
-	Operator string `json:"operator"` // contains | not_contains | equals | not_equals | starts_with | ends_with | matches
+	Field    string `json:"field"`    // subject | body | from | fromName | recipient | fromDomain | hasAttachments | spamScore
+	Operator string `json:"operator"` // string: contains|not_contains|equals|not_equals|starts_with|ends_with|matches ; numeric: gt|gte|lt|lte|eq|neq
 	Value    string `json:"value"`
 }
 
 // Action is one row of the "Then apply" block.
 type Action struct {
-	Type       string   `json:"type"` // tag | assign | status | priority
+	Type       string   `json:"type"` // tag | assign | status | priority | drop
 	TagKind    string   `json:"tagKind"`
 	TagNames   []string `json:"tagNames"`
 	AssigneeID uint32   `json:"assigneeId"`
@@ -35,12 +36,15 @@ type Email struct {
 	From           string
 	FromName       string
 	Recipient      string
+	FromDomain     string
 	HasAttachments bool
+	SpamScore      float64
 }
 
-// String fields support text operators; hasAttachments is boolean.
+// String fields support text operators; hasAttachments is boolean; spamScore
+// is numeric.
 var allowedFields = map[string]bool{
-	"subject": true, "body": true, "from": true, "fromName": true, "recipient": true,
+	"subject": true, "body": true, "from": true, "fromName": true, "recipient": true, "fromDomain": true,
 }
 
 // Engine holds a reusable CEL environment.
@@ -56,7 +60,9 @@ func NewEngine() (*Engine, error) {
 		cel.Variable("from", cel.StringType),
 		cel.Variable("fromName", cel.StringType),
 		cel.Variable("recipient", cel.StringType),
+		cel.Variable("fromDomain", cel.StringType),
 		cel.Variable("hasAttachments", cel.BoolType),
+		cel.Variable("spamScore", cel.DoubleType),
 	)
 	if err != nil {
 		return nil, err
@@ -91,6 +97,36 @@ func conditionExpr(c Condition) string {
 			return "hasAttachments == false"
 		}
 		return "hasAttachments == true"
+	}
+	// Numeric field: spamScore. The value is parsed as a float and emitted as
+	// a CEL double literal (never interpolated as text), so it can't inject.
+	if c.Field == "spamScore" {
+		v, err := strconv.ParseFloat(strings.TrimSpace(c.Value), 64)
+		if err != nil {
+			return ""
+		}
+		// Emit a CEL double literal (must contain a '.', else CEL treats it as
+		// an int and `double > int` fails to type-check).
+		lit := strconv.FormatFloat(v, 'f', -1, 64)
+		if !strings.Contains(lit, ".") {
+			lit += ".0"
+		}
+		switch c.Operator {
+		case "gt":
+			return "spamScore > " + lit
+		case "gte":
+			return "spamScore >= " + lit
+		case "lt":
+			return "spamScore < " + lit
+		case "lte":
+			return "spamScore <= " + lit
+		case "eq", "equals":
+			return "spamScore == " + lit
+		case "neq", "ne", "not_equals":
+			return "spamScore != " + lit
+		default:
+			return ""
+		}
 	}
 	if !allowedFields[c.Field] {
 		return ""
@@ -154,7 +190,9 @@ func (e *Engine) Eval(expr string, m Email) (bool, error) {
 		"from":           m.From,
 		"fromName":       m.FromName,
 		"recipient":      m.Recipient,
+		"fromDomain":     m.FromDomain,
 		"hasAttachments": m.HasAttachments,
+		"spamScore":      m.SpamScore,
 	})
 	if err != nil {
 		return false, err

@@ -75,6 +75,21 @@ a public comment (and re-opens a resolved/closed ticket) instead of creating a
 new ticket. Threading helpers live in `internal/thread`; SMTP sending in
 `internal/mailer` (wneessen/go-mail).
 
+## Rules (auto-actions on inbound mail)
+
+`TicketRuleService` + the CEL engine (`internal/rules`). A rule is conditions
+(field/operator/value, `match=ALL|ANY`) → actions. Evaluated in
+`internal/webhook` **before** ticket creation so a Drop rule can discard mail.
+
+- **Condition fields:** `subject`, `body`, `from`, `fromName`, `recipient`,
+  `fromDomain` (string ops); `hasAttachments` (yes/no); `spamScore` (numeric
+  ops `gt/gte/lt/lte/eq/neq`, read from the `X-Spam-Score` header — **0 when
+  absent**). Spam values are emitted as CEL double literals (never interpolated).
+- **Actions:** `tag`, `assign`, `status`, `priority`, and `drop`. A matched
+  rule with a **drop** action discards the inbound email (no ticket created,
+  short-circuits). Non-drop actions of matched rules are applied after creation
+  (tags unioned; assign/status/priority = first match wins).
+
 ## Configuration / env
 
 - `ADMIN_GRPC_ENDPOINT`, `GRPC_ADVERTISE_ADDR`, `HTTP_ADVERTISE_ADDR`, `FRONTEND_ENTRY_URL`, `CERTS_DIR` — platform registration/mTLS.

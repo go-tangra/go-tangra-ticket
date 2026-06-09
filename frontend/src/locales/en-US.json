@@ -3,7 +3,7 @@
     "ticket": "Tickets",
     "tickets": "Tickets",
     "tags": "Tags",
-    "rules": "Auto-Tag Rules"
+    "rules": "Rules"
   },
   "action": {
     "edit": "Edit",
@@ -67,8 +67,8 @@
       "nameRequired": "Name is required"
     },
     "rule": {
-      "title": "Auto-Tag Rules",
-      "hint": "Rules run automatically when a ticket is created from email. The first matching tags are applied.",
+      "title": "Rules",
+      "hint": "Rules run automatically on incoming email. Matching rules apply their actions (tag, assign, status, priority); a Drop rule discards the email before a ticket is created.",
       "create": "New Rule",
       "edit": "Edit Rule",
       "name": "Rule name",
@@ -88,6 +88,8 @@
       "actionAssign": "Assign to",
       "actionStatus": "Set status",
       "actionPriority": "Set priority",
+      "actionDrop": "Drop (discard)",
+      "dropHint": "Matching emails are discarded — no ticket is created.",
       "conditionRequired": "Add at least one condition with a value",
       "field": "Field",
       "operator": "Operator",

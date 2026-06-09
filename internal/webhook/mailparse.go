@@ -10,6 +10,7 @@ import (
 	"mime/quotedprintable"
 	"net/mail"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/text/encoding"
@@ -43,9 +44,23 @@ type parsedMail struct {
 	references    []string // References chain message-ids (no angle brackets)
 	autoSubmitted string   // Auto-Submitted header, lowercased
 	precedence    string   // Precedence header, lowercased
+	spamScore     float64  // X-Spam-Score header as float (0 if absent/unparseable)
 	text          string   // plain text (text/plain preferred, else HTML->text)
 	html          string   // raw HTML body, if the email had one
 	attachments   []mailAttachment
+}
+
+// parseSpamScore reads a float from an X-Spam-Score header value; returns 0
+// when the header is absent or not a number.
+func parseSpamScore(v string) float64 {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return 0
+	}
+	if f, err := strconv.ParseFloat(v, 64); err == nil {
+		return f
+	}
+	return 0
 }
 
 // isAuto reports whether the message is itself an automated/bulk message, so
@@ -112,6 +127,7 @@ func parseMail(raw []byte) parsedMail {
 	out.references = messageIDList(msg.Header.Get("References"))
 	out.autoSubmitted = strings.ToLower(strings.TrimSpace(msg.Header.Get("Auto-Submitted")))
 	out.precedence = strings.ToLower(strings.TrimSpace(msg.Header.Get("Precedence")))
+	out.spamScore = parseSpamScore(msg.Header.Get("X-Spam-Score"))
 	if addr, e := mail.ParseAddress(msg.Header.Get("From")); e == nil {
 		out.fromEmail = addr.Address
 		out.fromName, _ = dec.DecodeHeader(addr.Name)
