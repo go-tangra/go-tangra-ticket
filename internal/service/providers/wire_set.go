@@ -13,6 +13,7 @@ import (
 )
 
 var ProviderSet = wire.NewSet(
+	service.NewSqlBackupService,
 	rules.NewEngine,
 	mailer.NewMailer,
 	metrics.NewCollector,

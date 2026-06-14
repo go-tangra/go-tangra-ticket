@@ -12,6 +12,8 @@ import (
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 
+	commonV1 "github.com/go-tangra/go-tangra-common/gen/go/common/service/v1"
+
 	"github.com/go-tangra/go-tangra-common/middleware/audit"
 	"github.com/go-tangra/go-tangra-common/middleware/mtls"
 	"github.com/go-tangra/go-tangra-common/viewer"
@@ -38,6 +40,7 @@ func NewGRPCServer(
 	userSvc *service.UserService,
 	tagSvc *service.TagService,
 	ruleSvc *service.RuleService,
+	sqlBackupSvc *service.SqlBackupService,
 ) *grpc.Server {
 	cfg := ctx.GetConfig()
 	l := ctx.NewLoggerHelper("ticket/grpc")
@@ -100,6 +103,8 @@ func NewGRPCServer(
 	ticketpb.RegisterTicketUserServiceServer(srv, userSvc)
 	ticketpb.RegisterTicketTagServiceServer(srv, tagSvc)
 	ticketpb.RegisterTicketRuleServiceServer(srv, ruleSvc)
+
+	commonV1.RegisterBackupServiceServer(srv, sqlBackupSvc)
 
 	return srv
 }
