@@ -19,6 +19,7 @@ import type {
   TicketPriority,
   TicketStatus,
 } from '../../api/client';
+import { formatDateTime } from '../../datetime';
 import { useTicketStore } from '../../stores/ticket.state';
 import { tagColor } from '../rules/helpers';
 import {
@@ -206,7 +207,7 @@ onMounted(() => {
           {{ assigneeLabel(record) }}
         </template>
         <template v-else-if="column.key === 'createTime'">
-          {{ record.createTime ? new Date(record.createTime).toLocaleString() : '—' }}
+          {{ record.createTime ? formatDateTime(record.createTime) : '—' }}
         </template>
         <template v-else-if="column.key === 'actions'">
           <Button size="small" @click="openDrawer(record)">View</Button>

@@ -22,6 +22,7 @@ import type {
   TicketStatus,
   TicketTag,
 } from '../../api/client';
+import { formatDateTime } from '../../datetime';
 import { useTagStore } from '../../stores/tag.state';
 import { useTicketStore } from '../../stores/ticket.state';
 import { tagColor } from '../rules/helpers';
@@ -262,7 +263,7 @@ async function saveTags() {
         <p v-if="ticket.recipient"><b>To:</b> {{ ticket.recipient }}</p>
         <p>
           <b>{{ $t('ticket.page.ticket.created') }}:</b>
-          {{ ticket.createTime ? new Date(ticket.createTime).toLocaleString() : '—' }}
+          {{ ticket.createTime ? formatDateTime(ticket.createTime) : '—' }}
         </p>
 
         <div style="display: flex; gap: 16px; margin: 12px 0">
@@ -336,7 +337,7 @@ async function saveTags() {
           >
             <div style="font-size: 12px; color: #888">
               <b>{{ commentAuthor(c) }}</b>
-              · {{ c.createTime ? new Date(c.createTime).toLocaleString() : '' }}
+              · {{ c.createTime ? formatDateTime(c.createTime) : '' }}
               <Tag v-if="c.internal" color="orange" style="margin-left: 6px">
                 {{ $t('ticket.page.ticket.internalNote') }}
               </Tag>
