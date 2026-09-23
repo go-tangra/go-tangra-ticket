@@ -1,0 +1,17 @@
+X-Fixture-Purpose: UTF-8 quoted-printable body with soft line breaks
+From: =?utf-8?Q?J=C3=BCrgen_M=C3=BCller?= <juergen@customer.example>
+To: Acme Support <support@acme.example>
+Subject: =?utf-8?Q?VPN_f=C3=A4llt_st=C3=A4ndig_aus?=
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <qp-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Gr=C3=BC=C3=9Fe aus M=C3=BCnchen =E2=80=94 the VPN drops every 10 minutes a=
+nd the error says =E2=80=9Ctimeout=E2=80=9D. Gr=C3=BC=C3=9Fe aus M=C3=BCnch=
+en =E2=80=94 the VPN drops every 10 minutes and the error says =E2=80=9Ctim=
+eout=E2=80=9D.=20
+A very long line that must be soft-wrapped by quoted-printable encoding bec=
+ause it exceeds seventy-six characters easily.
+

@@ -64,13 +64,22 @@ Users, stats, system
 - `GET /assignable-users` (tickets:read) → `{items: [{id, name, email}]}`.
 - `GET /stats?days=30` (stats:read) → `{by_status, by_priority, by_assignee,
   unassigned_open, created_per_day[], resolved_per_day[]}`.
-- `GET /stream` (tickets:read) — SSE of this tenant's ticket events.
-- `POST /backup/export`, `POST /backup/import` (backup:manage; full/cross-tenant
-  restore → platform-admin).
+- `GET /stream` (tickets:read) — SSE of this tenant's ticket events. Declares
+  `x-freya-timeout-seconds: 300` (the gateway route maximum) so the normal 30 s
+  forward timeout does not cut it; the module ends it at 290 s and the client
+  resumes with `last_id`.
+- `POST /backup/export` `{tenant_id?}`, `POST /backup/import` `{backup, mode?:
+  skip|overwrite, tenant_id?, full?}` → `{tenant_id, mode, imported, skipped,
+  deleted}` (backup:manage; another tenant's export, full or cross-tenant
+  restore → platform-admin; a bad document → 422). The export carries raw HTML
+  bodies and attachment object keys for restore, never secrets or object bytes.
 - `GET /health` (public).
 
-No response includes relay/hook secrets, raw HTML bodies, or object-store
-credentials.
+No response includes relay/hook secrets or object-store credentials. No response
+includes a raw HTML body **except** `POST /backup/export` (`backup:manage`),
+which deliberately carries each ticket's stored raw HTML body so a restore is
+lossless; every other route (ticket reads, `/tickets/{id}/body`, events, the
+gRPC surface) returns only the sanitised rendition or plain text.
 
 ## B. Inbound mail edge — separate listener (not gateway-proxied)
 

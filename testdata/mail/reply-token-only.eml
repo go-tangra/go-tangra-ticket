@@ -1,0 +1,13 @@
+X-Fixture-Purpose: reply without threading headers, threaded only by the [#id] reference token in body and subject
+From: Jane Customer <jane@customer.example>
+To: Acme Support <support@acme.example>
+Subject: Fwd: Printer [#0190f7c2-6a3e-7c1a-9b2e-2f6f9d1b4c55]
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <token-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Following up on this one.
+
+Ticket reference: [#0190f7c2-6a3e-7c1a-9b2e-2f6f9d1b4c55]

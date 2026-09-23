@@ -1,0 +1,711 @@
+openapi: 3.1.0
+info:
+  title: Ticket API
+  version: 0.1.0
+  description: >
+    Email-driven helpdesk: tickets with a status/priority/assignee lifecycle,
+    tags and categories, internal notes and emailed public replies, ordered CEL
+    triage rules, inbound mailboxes, history, dashboard statistics, a live event
+    stream and tenant backup. Gateway-proxied under /api/ticket. Every route
+    declares an x-freya-permission (or x-freya-public); mutating routes carry the
+    platform CSRF header. No response carries relay/SMTP secrets, object-store
+    credentials or a raw (unsanitised) HTML body — message bodies are served only
+    through /tickets/{id}/body as sanitised HTML plus plain text.
+servers:
+  - url: /
+components:
+  parameters:
+    csrf:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: { type: string, maxLength: 128 }
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, maxLength: 64 }
+      example: '018f3a2b-0000-7000-8000-000000000001'
+    attId:
+      name: att_id
+      in: path
+      required: true
+      schema: { type: string, maxLength: 64 }
+      example: '018f3a2b-0000-7000-8000-000000000002'
+    page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100000 }
+    pageSize:
+      name: page_size
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100 }
+  schemas:
+    Error:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: >
+            bad_request | invalid_status | invalid_assignee | invalid_rule |
+            ticket_not_found | comment_not_found | conflict | reply_unavailable |
+            delivery_failed | directory_unavailable | unauthenticated | forbidden | not_found |
+            validation_failed | malformed_body | body_too_large | temporarily_unavailable
+        detail: { type: object }
+    Status: { type: string, enum: [open, in_progress, pending, resolved, closed] }
+    Priority: { type: string, enum: [low, normal, high, urgent] }
+    TagKind: { type: string, enum: [tag, category] }
+    Tag:
+      type: object
+      required: [id, name, kind]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        kind: { $ref: '#/components/schemas/TagKind' }
+        color: { type: string }
+        description: { type: string }
+        created_at: { type: string, format: date-time }
+    Attachment:
+      type: object
+      required: [id, filename, content_type, size]
+      properties:
+        id: { type: string }
+        comment_id: { type: string }
+        filename: { type: string }
+        content_type: { type: string }
+        size: { type: integer }
+        content_id: { type: string }
+        inline: { type: boolean }
+        created_at: { type: string, format: date-time }
+    Ticket:
+      type: object
+      description: A ticket. Never carries the raw HTML body (see /tickets/{id}/body).
+      required: [id, subject, status, priority, source, comment_count, created_at, updated_at]
+      properties:
+        id: { type: string }
+        tenant_id: { type: string }
+        subject: { type: string }
+        description: { type: string }
+        status: { $ref: '#/components/schemas/Status' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        source: { type: string, enum: [manual, email] }
+        requester_email: { type: string }
+        requester_name: { type: string }
+        recipient: { type: string }
+        mailbox_id: { type: string }
+        external_id: { type: string, description: 'root message id of an email ticket' }
+        last_message_id: { type: string, description: 'most recent message id (threading)' }
+        assignee_id: { type: string }
+        assignee_name: { type: string }
+        comment_count: { type: integer }
+        has_html: { type: boolean }
+        tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        attachments: { type: array, items: { $ref: '#/components/schemas/Attachment' } }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        resolved_at: { type: string, format: date-time }
+    TicketPage:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Ticket' } }
+        total: { type: integer }
+    TicketCreate:
+      type: object
+      additionalProperties: false
+      required: [subject]
+      properties:
+        subject: { type: string, minLength: 1, maxLength: 998 }
+        description: { type: string, maxLength: 1048576 }
+        priority: { $ref: '#/components/schemas/Priority' }
+        requester_email: { type: string, maxLength: 320 }
+        requester_name: { type: string, maxLength: 200 }
+        assignee_id: { type: string, maxLength: 64 }
+    TicketUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        subject: { type: string, minLength: 1, maxLength: 998 }
+        description: { type: string, maxLength: 1048576 }
+        priority: { $ref: '#/components/schemas/Priority' }
+    AssignInput:
+      type: object
+      additionalProperties: false
+      required: [assignee_id]
+      properties:
+        assignee_id: { type: [string, 'null'], maxLength: 64 }
+    StatusInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, maxLength: 32 }
+    TagsInput:
+      type: object
+      additionalProperties: false
+      required: [tag_ids]
+      properties:
+        tag_ids: { type: array, maxItems: 100, items: { type: string, maxLength: 64 } }
+    HistoryEntry:
+      type: object
+      required: [id, field, old_value, new_value, actor_kind, created_at]
+      properties:
+        id: { type: string }
+        field: { type: string, enum: [status, priority, assignee] }
+        old_value: { type: string }
+        new_value: { type: string }
+        actor_kind: { type: string, enum: [agent, rule, inbound, system] }
+        actor_id: { type: string }
+        created_at: { type: string, format: date-time }
+    MessageBody:
+      type: object
+      description: Sanitised HTML (never raw) plus the plain-text body.
+      required: [html_sanitized, text]
+      properties:
+        html_sanitized: { type: string }
+        text: { type: string }
+    Comment:
+      type: object
+      required: [id, ticket_id, body, internal, author_kind, delivery, created_at]
+      properties:
+        id: { type: string }
+        ticket_id: { type: string }
+        body: { type: string }
+        internal: { type: boolean }
+        author_kind: { type: string, enum: [agent, requester, system] }
+        author_id: { type: string }
+        author_name: { type: string }
+        author_email: { type: string }
+        message_id: { type: string }
+        delivery: { type: string, enum: [none, sent, failed] }
+        created_at: { type: string, format: date-time }
+    NoteInput:
+      type: object
+      additionalProperties: false
+      required: [body, internal]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 1048576 }
+        internal: { type: boolean, const: true }
+    ReplyInput:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 1048576 }
+    TagInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        kind: { $ref: '#/components/schemas/TagKind' }
+        color: { type: string, maxLength: 32 }
+        description: { type: string, maxLength: 1000 }
+    Condition:
+      type: object
+      additionalProperties: false
+      required: [field, operator, value]
+      properties:
+        field: { type: string, maxLength: 32 }
+        operator: { type: string, maxLength: 32 }
+        value: { type: string, maxLength: 1000 }
+    Action:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string, enum: [tag, assign, status, priority, drop] }
+        tag_kind: { $ref: '#/components/schemas/TagKind' }
+        tag_names: { type: array, maxItems: 20, items: { type: string, maxLength: 100 } }
+        assignee_id: { type: string, maxLength: 64 }
+        status: { type: string, maxLength: 32 }
+        priority: { type: string, maxLength: 32 }
+    RuleInput:
+      type: object
+      additionalProperties: false
+      required: [name, actions]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        enabled: { type: boolean }
+        sort_order: { type: integer, minimum: -1000000, maximum: 1000000 }
+        match: { type: string, enum: [all, any] }
+        conditions: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Condition' } }
+        expression: { type: string, maxLength: 4096 }
+        actions: { type: array, minItems: 1, maxItems: 20, items: { $ref: '#/components/schemas/Action' } }
+    Rule:
+      type: object
+      required: [id, name, enabled, sort_order, match, conditions, actions, version]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        enabled: { type: boolean }
+        sort_order: { type: integer }
+        match: { type: string, enum: [all, any] }
+        conditions: { type: array, items: { $ref: '#/components/schemas/Condition' } }
+        expression: { type: string }
+        actions: { type: array, items: { $ref: '#/components/schemas/Action' } }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    RuleTestInput:
+      type: object
+      additionalProperties: false
+      required: [rule, sample]
+      properties:
+        rule: { $ref: '#/components/schemas/RuleInput' }
+        sample:
+          type: object
+          additionalProperties: false
+          properties:
+            subject: { type: string, maxLength: 998 }
+            body: { type: string, maxLength: 65536 }
+            from: { type: string, maxLength: 320 }
+            from_name: { type: string, maxLength: 200 }
+            recipient: { type: string, maxLength: 320 }
+            has_attachments: { type: boolean }
+            spam_score: { type: number }
+    RuleTestResult:
+      type: object
+      required: [matched, actions]
+      properties:
+        matched: { type: boolean }
+        actions: { type: array, items: { $ref: '#/components/schemas/Action' } }
+    Mailbox:
+      type: object
+      required: [id, address, display_name, active, auto_ack]
+      properties:
+        id: { type: string }
+        address: { type: string }
+        display_name: { type: string }
+        active: { type: boolean }
+        auto_ack: { type: boolean }
+        auto_ack_template: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MailboxInput:
+      type: object
+      additionalProperties: false
+      properties:
+        address: { type: string, minLength: 3, maxLength: 320 }
+        display_name: { type: string, maxLength: 200 }
+        active: { type: boolean }
+        auto_ack: { type: boolean }
+        auto_ack_template: { type: string, maxLength: 8192 }
+    User:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+    DayCount:
+      type: object
+      properties:
+        day: { type: string }
+        count: { type: integer }
+    Stats:
+      type: object
+      properties:
+        total: { type: integer }
+        by_status: { type: object, additionalProperties: { type: integer } }
+        by_priority: { type: object, additionalProperties: { type: integer } }
+        by_assignee:
+          type: array
+          items:
+            type: object
+            properties:
+              assignee_id: { type: string }
+              assignee_name: { type: string }
+              count: { type: integer }
+        unassigned_open: { type: integer }
+        created_per_day: { type: array, items: { $ref: '#/components/schemas/DayCount' } }
+        resolved_per_day: { type: array, items: { $ref: '#/components/schemas/DayCount' } }
+  responses:
+    Error:
+      description: refusal
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+paths:
+  # ---- Tickets
+  /api/ticket/v1/tickets:
+    get:
+      operationId: listTickets
+      x-freya-permission: 'tickets:read'
+      parameters:
+        - { $ref: '#/components/parameters/page' }
+        - { $ref: '#/components/parameters/pageSize' }
+        - { name: status, in: query, schema: { type: string, maxLength: 32 } }
+        - { name: priority, in: query, schema: { type: string, maxLength: 32 } }
+        - { name: assignee_id, in: query, schema: { type: string, maxLength: 64 }, description: "'none' selects unassigned tickets" }
+        - { name: tag_id, in: query, schema: { type: string, maxLength: 64 } }
+        - { name: query, in: query, schema: { type: string, maxLength: 200 } }
+      responses:
+        '200': { description: 'page of tickets (newest first)', content: { application/json: { schema: { $ref: '#/components/schemas/TicketPage' } } } }
+        default: { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createTicket
+      x-freya-permission: 'tickets:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TicketCreate' } } } }
+      responses:
+        '201': { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Ticket' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}:
+    get:
+      operationId: getTicket
+      x-freya-permission: 'tickets:read'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: 'ticket with tags and attachments', content: { application/json: { schema: { $ref: '#/components/schemas/Ticket' } } } }
+        default: { $ref: '#/components/responses/Error' }
+    put:
+      operationId: updateTicket
+      x-freya-permission: 'tickets:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TicketUpdate' } } } }
+      responses:
+        '200': { description: updated, content: { application/json: { schema: { $ref: '#/components/schemas/Ticket' } } } }
+        default: { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteTicket
+      x-freya-permission: 'tickets:delete'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '204': { description: 'deleted with comments, links, history, attachments and their objects' }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}/assign:
+    post:
+      operationId: assignTicket
+      x-freya-permission: 'tickets:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AssignInput' } } } }
+      responses:
+        '200': { description: assigned, content: { application/json: { schema: { $ref: '#/components/schemas/Ticket' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}/status:
+    post:
+      operationId: setTicketStatus
+      x-freya-permission: 'tickets:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/StatusInput' } } } }
+      responses:
+        '200': { description: 'status changed', content: { application/json: { schema: { $ref: '#/components/schemas/Ticket' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}/tags:
+    post:
+      operationId: setTicketTags
+      x-freya-permission: 'tickets:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TagsInput' } } } }
+      responses:
+        '200': { description: 'tag set replaced', content: { application/json: { schema: { $ref: '#/components/schemas/Ticket' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}/history:
+    get:
+      operationId: listTicketHistory
+      x-freya-permission: 'tickets:read'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: 'history (oldest first)'
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}/body:
+    get:
+      operationId: getTicketBody
+      x-freya-permission: 'tickets:read'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: 'sanitised HTML + text (raw HTML is never returned)', content: { application/json: { schema: { $ref: '#/components/schemas/MessageBody' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}/attachments/{att_id}:
+    get:
+      operationId: downloadTicketAttachment
+      x-freya-permission: 'tickets:read'
+      x-freya-timeout-seconds: 120
+      parameters: [{ $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/attId' }]
+      responses:
+        '200':
+          description: >
+            attachment bytes, streamed only after the ticket and attachment are
+            found in the caller's tenant; Content-Disposition attachment and
+            application/octet-stream, except allow-listed inline (cid) images
+            which keep their image type and are served inline; always nosniff
+            and a sandboxing Content-Security-Policy
+          content:
+            application/octet-stream: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/gif: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        default: { $ref: '#/components/responses/Error' }
+  # ---- Comments
+  /api/ticket/v1/tickets/{id}/comments:
+    get:
+      operationId: listTicketComments
+      x-freya-permission: 'tickets:read'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: 'comments (oldest first)'
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Comment' } } } } } }
+        default: { $ref: '#/components/responses/Error' }
+    post:
+      operationId: addTicketNote
+      x-freya-permission: 'tickets:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NoteInput' } } } }
+      responses:
+        '201': { description: 'internal note (never emailed)', content: { application/json: { schema: { $ref: '#/components/schemas/Comment' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tickets/{id}/reply:
+    post:
+      operationId: replyToTicket
+      x-freya-permission: 'tickets:manage'
+      x-freya-timeout-seconds: 60
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReplyInput' } } } }
+      responses:
+        '201': { description: 'reply emailed to the requester', content: { application/json: { schema: { $ref: '#/components/schemas/Comment' } } } }
+        '409': { description: reply_unavailable, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '502': { description: 'delivery failed (comment recorded as delivery=failed)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/comments/{id}:
+    delete:
+      operationId: deleteComment
+      x-freya-permission: 'tickets:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '204': { description: deleted }
+        default: { $ref: '#/components/responses/Error' }
+  # ---- Tags
+  /api/ticket/v1/tags:
+    get:
+      operationId: listTags
+      x-freya-permission: 'tickets:read'
+      parameters: [{ name: kind, in: query, schema: { $ref: '#/components/schemas/TagKind' } }]
+      responses:
+        '200':
+          description: tags
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Tag' } } } } } }
+        default: { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createTag
+      x-freya-permission: 'tags:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TagInput' } } } }
+      responses:
+        '201': { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Tag' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/tags/{id}:
+    put:
+      operationId: updateTag
+      x-freya-permission: 'tags:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TagInput' } } } }
+      responses:
+        '200': { description: 'updated (kind is immutable)', content: { application/json: { schema: { $ref: '#/components/schemas/Tag' } } } }
+        default: { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteTag
+      x-freya-permission: 'tags:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '204': { description: deleted }
+        default: { $ref: '#/components/responses/Error' }
+  # ---- Rules
+  /api/ticket/v1/rules:
+    get:
+      operationId: listRules
+      x-freya-permission: 'rules:manage'
+      responses:
+        '200':
+          description: 'rules (sort order)'
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Rule' } } } } } }
+        default: { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createRule
+      x-freya-permission: 'rules:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RuleInput' } } } }
+      responses:
+        '201': { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Rule' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/rules/test:
+    post:
+      operationId: testRule
+      x-freya-permission: 'rules:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RuleTestInput' } } } }
+      responses:
+        '200': { description: 'dry run', content: { application/json: { schema: { $ref: '#/components/schemas/RuleTestResult' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/rules/{id}:
+    get:
+      operationId: getRule
+      x-freya-permission: 'rules:manage'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: rule, content: { application/json: { schema: { $ref: '#/components/schemas/Rule' } } } }
+        default: { $ref: '#/components/responses/Error' }
+    put:
+      operationId: updateRule
+      x-freya-permission: 'rules:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RuleInput' } } } }
+      responses:
+        '200': { description: updated, content: { application/json: { schema: { $ref: '#/components/schemas/Rule' } } } }
+        default: { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteRule
+      x-freya-permission: 'rules:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '204': { description: deleted }
+        default: { $ref: '#/components/responses/Error' }
+  # ---- Mailboxes
+  /api/ticket/v1/mailboxes:
+    get:
+      operationId: listMailboxes
+      x-freya-permission: 'mailboxes:manage'
+      responses:
+        '200':
+          description: mailboxes
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Mailbox' } } } } } }
+        default: { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createMailbox
+      x-freya-permission: 'mailboxes:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MailboxInput' } } } }
+      responses:
+        '201': { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Mailbox' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/mailboxes/{id}:
+    put:
+      operationId: updateMailbox
+      x-freya-permission: 'mailboxes:manage'
+      parameters: [{ $ref: '#/components/parameters/csrf' }, { $ref: '#/components/parameters/id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MailboxInput' } } } }
+      responses:
+        '200': { description: updated, content: { application/json: { schema: { $ref: '#/components/schemas/Mailbox' } } } }
+        default: { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteMailbox
+      x-freya-permission: 'mailboxes:manage'
+      parameters:
+        - { $ref: '#/components/parameters/csrf' }
+        - { $ref: '#/components/parameters/id' }
+        - { name: force, in: query, schema: { type: boolean }, description: 'detach referencing tickets' }
+      responses:
+        '204': { description: deleted }
+        '409': { description: 'referenced by tickets (use force)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  # ---- Users, stats, system
+  /api/ticket/v1/assignable-users:
+    get:
+      operationId: listAssignableUsers
+      x-freya-permission: 'tickets:read'
+      responses:
+        '200':
+          description: 'users holding tickets:manage'
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/User' } } } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/stats:
+    get:
+      operationId: getStats
+      x-freya-permission: 'stats:read'
+      parameters: [{ name: days, in: query, schema: { type: integer, minimum: 1, maximum: 365 } }]
+      responses:
+        '200': { description: 'dashboard aggregates', content: { application/json: { schema: { $ref: '#/components/schemas/Stats' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/stream:
+    get:
+      operationId: streamEvents
+      description: >-
+        Long-lived SSE stream. The route timeout is raised to the gateway's
+        5-minute route maximum so the normal 30 s forward timeout never cuts it;
+        the module closes the stream at 290 s and the client resumes with last_id.
+      x-freya-permission: 'tickets:read'
+      x-freya-timeout-seconds: 300
+      parameters: [{ name: last_id, in: query, schema: { type: string, maxLength: 64 } }]
+      responses:
+        '200': { description: 'SSE stream of this tenant''s ticket events', content: { text/event-stream: { schema: { type: string } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/backup/export:
+    post:
+      operationId: exportBackup
+      description: >-
+        Schema-versioned, FK-ordered export of one tenant (tags, mailboxes, rules,
+        tickets incl. their raw HTML body for restore, tag links, comments,
+        history, attachment metadata by object-key reference). Never carries
+        secrets or object bytes. Another tenant than the caller's is
+        platform-admin only.
+      x-freya-permission: 'backup:manage'
+      x-freya-timeout-seconds: 120
+      parameters: [{ $ref: '#/components/parameters/csrf' }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                tenant_id: { type: string, format: uuid, description: 'platform-admin only when not the caller''s tenant' }
+      responses:
+        '200': { description: 'tenant export (no secrets, no object bytes)', content: { application/json: { schema: { type: object } } } }
+        '403': { description: 'backup:manage missing, or another tenant without platform-admin', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/backup/import:
+    post:
+      operationId: importBackup
+      description: >-
+        Loads a backup into the caller's tenant (skip keeps existing rows,
+        overwrite rewrites them; comments, history, links and attachments are
+        append-only). tenant_id other than the caller's (cross-tenant, fresh
+        ids) or full (wipe first) is platform-admin only.
+      x-freya-permission: 'backup:manage'
+      x-freya-max-body-bytes: 67108864
+      x-freya-timeout-seconds: 300
+      parameters:
+        - { $ref: '#/components/parameters/csrf' }
+        - { name: mode, in: query, schema: { type: string, enum: [skip, overwrite] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [backup]
+              additionalProperties: false
+              properties:
+                mode: { type: string, enum: [skip, overwrite] }
+                tenant_id: { type: string, format: uuid }
+                full: { type: boolean }
+                backup: { type: object }
+      responses:
+        '200':
+          description: 'import summary'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_id: { type: string }
+                  mode: { type: string }
+                  imported: { type: object, additionalProperties: { type: integer } }
+                  skipped: { type: object, additionalProperties: { type: integer } }
+                  deleted: { type: integer }
+        '403': { description: 'backup:manage missing, or full/cross-tenant restore without platform-admin', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '422': { description: 'unsupported schema version or invalid document', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        default: { $ref: '#/components/responses/Error' }
+  /api/ticket/v1/health:
+    get:
+      operationId: health
+      x-freya-public: true
+      responses:
+        '200': { description: 'liveness + component status', content: { application/json: { schema: { type: object } } } }
