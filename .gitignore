@@ -1,6 +1,0 @@
-/bin/
-*.exe
-.env
-node_modules/
-frontend/dist/
-vite.hotreload.config.ts

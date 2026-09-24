@@ -1,87 +1,46 @@
-##################################
-# Stage 0: Generate the TypeScript API client from protos
-##################################
+# syntax=docker/dockerfile:1
+# Ticket service image: builds the Vue remote, embeds it (-tags ui), and
+# produces a slim runtime carrying ticketsvc. Build context is the repo root
+# so the module's replace directives (../.. and sibling services) resolve.
 
-FROM golang:1.25-alpine AS ts-codegen
-ENV GOTOOLCHAIN=auto
-RUN apk add --no-cache curl git
-RUN curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /usr/local/bin/buf && \
-    chmod +x /usr/local/bin/buf
-# Pinned generator (NOT @latest): @latest drifted to a ClientTransport API
-# that breaks the fetch handler in frontend/src/api/client.ts.
-RUN GOBIN=/usr/local/bin go install github.com/go-kratos/protoc-gen-typescript-http@v0.0.0-20260525125049-694cf6cd0529
+FROM node:22-alpine AS ui
+# The front-ends form one npm workspace (root package-lock.json) with the shared
+# kit at ui/kit; install the workspace, build the kit, then this front-end.
+WORKDIR /w
+COPY package.json package-lock.json .npmrc ./
+COPY ui/kit/package.json ui/kit/
+COPY services/gateway/shell/package.json services/gateway/shell/
+COPY services/auth/console/package.json services/auth/console/
+COPY services/asset/ui/package.json services/asset/ui/
+COPY services/inventory/ui/package.json services/inventory/ui/
+COPY services/ipam/ui/package.json services/ipam/ui/
+COPY services/paperless/ui/package.json services/paperless/ui/
+COPY services/deployer/ui/package.json services/deployer/ui/
+COPY services/lcm/ui/package.json services/lcm/ui/
+COPY services/notification/ui/package.json services/notification/ui/
+COPY services/warden/ui/package.json services/warden/ui/
+COPY services/ticket/ui/package.json services/ticket/ui/
+COPY services/dns/ui/package.json services/dns/ui/
+RUN npm ci --no-audit --no-fund
+COPY ui/ ./ui/
+RUN npm run -w ui/kit build
+COPY services/ticket/ui/ ./services/ticket/ui/
+RUN npm run -w services/ticket/ui build
+
+FROM golang:1.26-alpine AS build
+RUN apk add --no-cache git ca-certificates
 WORKDIR /src
-COPY buf.typescript.gen.yaml buf.yaml buf.lock ./
-COPY protos/ protos/
-RUN buf generate --template buf.typescript.gen.yaml
-
-##################################
-# Stage 1: Build frontend module
-##################################
-
-FROM node:20-alpine AS frontend-builder
-RUN npm install -g pnpm@9
-WORKDIR /frontend
-COPY frontend/package.json frontend/pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
-COPY frontend/ .
-COPY --from=ts-codegen /src/frontend/src/generated/ src/generated/
-RUN pnpm build
-
-##################################
-# Stage 1: Build Go executable
-##################################
-
-FROM golang:1.25-alpine AS builder
-
-ARG APP_VERSION=1.0.0
-ENV GOTOOLCHAIN=auto
-
-RUN apk add --no-cache git make curl
-RUN curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /usr/local/bin/buf && \
-    chmod +x /usr/local/bin/buf
-
-WORKDIR /src
-
-COPY go.mod go.sum ./
-RUN go mod download
-
 COPY . .
-
-# Regenerate proto descriptor so the embedded descriptor.bin is always fresh.
-RUN buf build -o cmd/server/assets/descriptor.bin
-
-# Embed the built frontend.
-COPY --from=frontend-builder /frontend/dist cmd/server/assets/frontend-dist/
-
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags "-X main.version=${APP_VERSION} -s -w" \
-    -o /src/bin/ticket-server \
-    ./cmd/server
-
-##################################
-# Stage 2: Runtime image
-##################################
+COPY --from=ui /w/services/ticket/ui/dist ./services/ticket/ui/dist
+WORKDIR /src/services/ticket
+ENV CGO_ENABLED=0 GOFLAGS=-buildvcs=false
+RUN go build -tags "ui" -o /out/ticketsvc ./cmd/ticketsvc
 
 FROM alpine:3.20
-
-ARG APP_VERSION=1.0.0
-RUN apk --no-cache add ca-certificates tzdata
-ENV TZ=UTC
-ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=warn
-
+RUN apk add --no-cache ca-certificates postgresql-client && adduser -D -u 10001 app
+COPY --from=build /out/ticketsvc /usr/local/bin/
+COPY services/ticket/deploy /app/deploy
 WORKDIR /app
-COPY --from=builder /src/bin/ticket-server /app/bin/ticket-server
-COPY --from=builder /src/configs/ /app/configs/
-
-RUN addgroup -g 1000 ticket && \
-    adduser -D -u 1000 -G ticket ticket && \
-    chown -R ticket:ticket /app
-USER ticket:ticket
-
-EXPOSE 10800 10801
-CMD ["/app/bin/ticket-server", "-c", "/app/configs"]
-
-LABEL org.opencontainers.image.title="Ticket Service" \
-      org.opencontainers.image.description="Support ticket system (iris email ingest + assignment)" \
-      org.opencontainers.image.version="${APP_VERSION}"
+USER app
+ENTRYPOINT ["ticketsvc"]
+CMD ["-config", "deploy/container.yaml"]

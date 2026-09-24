@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+// ticket.v1 is the module-to-module API of the ticket (helpdesk) module
+// (contracts §C). It is NOT proxied by the gateway: callers are authenticated
+// platform services on the Freya SPIFFE mTLS channel (checked against the
+// policy allow-list), acting for the tenant named in each request. It lets
+// other modules open tickets (monitoring or asset alerts), read them and add
+// comments. No message ever carries a raw HTML body, attachment bytes,
+// requester secrets or relay/SMTP credentials.
+package ticket.v1;
+
+option go_package = "github.com/go-tangra/go-tangra-ticket/v4/api/proto/ticket/v1;ticketv1";
+
+// Timestamp is seconds since the epoch; 0 = unset.
+message Timestamp { int64 unix = 1; }
+
+message Ticket {
+  string id = 1;
+  string subject = 2;
+  string description = 3;
+  string status = 4;   // open | in_progress | pending | resolved | closed
+  string priority = 5; // low | normal | high | urgent
+  string source = 6;   // manual | email
+  string requester_email = 7;
+  string requester_name = 8;
+  string assignee_id = 9;
+  string assignee_name = 10;
+  int32 comment_count = 11;
+  repeated string tag_ids = 12;
+  Timestamp created_at = 13;
+  Timestamp updated_at = 14;
+  Timestamp resolved_at = 15;
+}
+
+message Comment {
+  string id = 1;
+  string ticket_id = 2;
+  string body = 3;
+  bool internal = 4;
+  string author_kind = 5; // agent | requester | system
+  string author_id = 6;
+  string author_name = 7;
+  string delivery = 8; // none | sent | failed
+  Timestamp created_at = 9;
+}
+
+message CreateTicketRequest {
+  string tenant_id = 1;
+  string subject = 2;
+  string description = 3;
+  string priority = 4;
+  string requester_email = 5;
+  string requester_name = 6;
+  string source_module = 7; // informational: the calling module's name
+}
+
+message GetTicketRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message TicketFilter {
+  string status = 1;
+  string priority = 2;
+  string assignee_id = 3; // "none" = unassigned
+  string tag_id = 4;
+  string query = 5;
+  int32 page = 6;
+  int32 page_size = 7; // <= 100
+}
+
+message ListTicketsRequest {
+  string tenant_id = 1;
+  TicketFilter filter = 2;
+}
+
+message ListTicketsResponse {
+  repeated Ticket items = 1;
+  int64 total = 2;
+}
+
+message AddCommentRequest {
+  string tenant_id = 1;
+  string ticket_id = 2;
+  string body = 3;
+  bool internal = 4;
+}
+
+// Tickets is the module-to-module ticket surface.
+service Tickets {
+  rpc Create(CreateTicketRequest) returns (Ticket);
+  rpc Get(GetTicketRequest) returns (Ticket);
+  rpc List(ListTicketsRequest) returns (ListTicketsResponse);
+  rpc AddComment(AddCommentRequest) returns (Comment);
+}

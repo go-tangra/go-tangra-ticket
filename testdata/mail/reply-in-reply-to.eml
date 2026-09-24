@@ -1,0 +1,16 @@
+X-Fixture-Purpose: requester reply threaded by In-Reply-To/References to an agent reply and the original message
+From: Jane Customer <jane@customer.example>
+To: Acme Support <support@acme.example>
+Subject: Re: Printer on floor 3 is jammed
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <reply-0001@mail.customer.example>
+MIME-Version: 1.0
+In-Reply-To: <ticket.0190f7c2-6a3e-7c1a-9b2e-2f6f9d1b4c55.0190f7c2-7000-7000-8000-000000000001@acme.example>
+References: <plain-0001@mail.customer.example> <ticket.0190f7c2-6a3e-7c1a-9b2e-2f6f9d1b4c55.0190f7c2-7000-7000-8000-000000000001@acme.example>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+It is still jamming after your fix.
+
+> On Tue, Acme Support wrote:
+> We replaced the roller.

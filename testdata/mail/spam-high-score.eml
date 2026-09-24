@@ -1,0 +1,13 @@
+X-Fixture-Purpose: spam with a high X-Spam-Score for rule tests
+From: Winner <prize@lottery.example>
+To: Acme Support <support@acme.example>
+Subject: You have WON a prize!!!
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <spam-0001@mail.customer.example>
+MIME-Version: 1.0
+X-Spam-Score: 12.5
+X-Spam-Flag: YES
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Click here to claim your prize now.

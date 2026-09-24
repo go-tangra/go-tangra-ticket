@@ -1,0 +1,12 @@
+X-Fixture-Purpose: out-of-office auto reply (Auto-Submitted: auto-replied) - no acknowledgement
+From: Bob Away <bob@customer.example>
+To: Acme Support <support@acme.example>
+Subject: Automatic reply: Out of office
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <auto-0001@mail.customer.example>
+MIME-Version: 1.0
+Auto-Submitted: auto-replied
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+I am out of the office until Monday.

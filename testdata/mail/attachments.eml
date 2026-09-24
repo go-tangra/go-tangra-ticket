@@ -1,0 +1,33 @@
+X-Fixture-Purpose: multipart/mixed with a PDF and a PNG attachment
+From: Jane Customer <jane@customer.example>
+To: Acme Support <support@acme.example>
+Subject: Invoice and photo attached
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <attach-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mix-1"
+
+--mix-1
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Please find the invoice and a photo of the device attached.
+
+--mix-1
+Content-Type: application/pdf; name="invoice.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="invoice.pdf"
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBv
+Ymo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlw
+ZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMjAwIDIwMF0+PmVuZG9iagp0cmFpbGVy
+PDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==
+
+--mix-1
+Content-Type: image/png; name="../../etc/device photo.png"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="../../etc/device photo.png"
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLv
+AAAAAElFTkSuQmCC
+--mix-1--

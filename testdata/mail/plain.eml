@@ -1,0 +1,17 @@
+X-Fixture-Purpose: simple plain-text support request
+From: Jane Customer <jane@customer.example>
+To: Acme Support <support@acme.example>
+Subject: Printer on floor 3 is jammed
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <plain-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Hello support,
+
+The printer on floor 3 keeps jamming on every job.
+Can someone take a look today?
+
+Thanks,
+Jane

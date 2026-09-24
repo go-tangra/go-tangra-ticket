@@ -1,0 +1,11 @@
+X-Fixture-Purpose: windows-1251 8bit body and an RFC 2047 ISO-2022-JP subject
+From: =?windows-1251?B?yOLg7SDP5fLw7uI=?= <ivan@customer.example>
+To: Acme Support <support@acme.example>
+Subject: =?iso-2022-jp?b?GyRCJVclaiVzJT8hPCROOE4+YxsoQg==?=
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <legacy-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=windows-1251
+Content-Transfer-Encoding: base64
+
+x+Tw4OLx8uLz6fLlIQrP8Ojt8uXwIO3lIPDg4e7y4OXyLiDP7uzu4+jy5Swg7+7m4Ovz6fHy4C4K
