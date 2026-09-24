@@ -1,0 +1,11 @@
+X-Fixture-Purpose: daemon/no-reply sender - no acknowledgement
+From: Notifications <no-reply@saas.example>
+To: Acme Support <support@acme.example>
+Subject: Your password was changed
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <noreply-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+This is an automated message. Do not reply.

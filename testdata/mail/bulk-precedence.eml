@@ -1,0 +1,13 @@
+X-Fixture-Purpose: mailing-list/bulk message (Precedence: bulk) - no acknowledgement
+From: Newsletter <news@vendor.example>
+To: Acme Support <support@acme.example>
+Subject: Monthly product news
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <bulk-0001@mail.customer.example>
+MIME-Version: 1.0
+Precedence: bulk
+List-Id: <news.vendor.example>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Our new product line is here.

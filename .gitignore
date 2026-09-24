@@ -1,6 +1,9 @@
-/bin/
-*.exe
-.env
-node_modules/
-frontend/dist/
-vite.hotreload.config.ts
+ui/node_modules/
+ui/dist/
+ui/test-results/
+ui/playwright-report/
+ui/.mf/
+.artifacts/
+coverage.out
+bin/
+/ticketsvc

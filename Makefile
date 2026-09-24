@@ -1,62 +1,48 @@
-VERSION ?= 1.0.0
-TICKET_IMAGE_NAME ?= ghcr.io/go-tangra/go-tangra-ticket
-TICKET_IMAGE_TAG ?= $(VERSION)
+GO        ?= go
+PKGS      := $(shell $(GO) list ./... | grep -v /ui/)
+COVER_OUT := coverage.out
 
-.PHONY: build-server
-build-server:
-	@echo "Building Ticket server..."
-	@go build -ldflags "-X main.version=$(VERSION)" -o ./bin/ticket-server ./cmd/server
+.PHONY: lint vuln test test-integration cover generate ui-build build build-ui image
 
-.PHONY: run-server
-run-server:
-	@go run ./cmd/server -c ./configs
+lint:
+	$(GO) vet ./...
+	staticcheck ./...
+	gosec -quiet -exclude-generated -exclude-dir=ui ./...
 
-.PHONY: api
-api:
-	@buf dep update
-	@buf generate
-	@buf build -o cmd/server/assets/descriptor.bin
+vuln:
+	./scripts/vulncheck.sh
 
-.PHONY: ts-client
-ts-client:
-	@# Generate the frontend TS client with the PINNED generator (NOT @latest).
-	@GOBIN=$$(pwd)/bin go install github.com/go-kratos/protoc-gen-typescript-http@v0.0.0-20260525125049-694cf6cd0529
-	@PATH="$$(pwd)/bin:$$PATH" buf generate --template buf.typescript.gen.yaml
-
-.PHONY: ent
-ent:
-	@# NOTE: the ent CLI (v0.14.5) is incompatible with newer tablewriter.
-	@# Pin it for the duration of generation, then drop the pin.
-	@go mod edit -replace github.com/olekukonko/tablewriter=github.com/olekukonko/tablewriter@v0.0.5
-	@GOFLAGS=-mod=mod go run entgo.io/ent/cmd/ent generate \
-		--feature sql/modifier --feature sql/upsert --feature sql/lock \
-		./internal/data/ent/schema; \
-		status=$$?; \
-		go mod edit -dropreplace github.com/olekukonko/tablewriter; \
-		go mod tidy; \
-		exit $$status
-
-.PHONY: wire
-wire:
-	@cd ./cmd/server && wire
-
-.PHONY: openapi
-openapi:
-	@buf generate --template buf.openapi.gen.yaml
-
-.PHONY: generate
-generate: api ent wire
-	@echo "Generation complete!"
-
-.PHONY: docker
-docker:
-	@docker build -t $(TICKET_IMAGE_NAME):$(TICKET_IMAGE_TAG) -t $(TICKET_IMAGE_NAME):latest \
-		--build-arg APP_VERSION=$(VERSION) -f ./Dockerfile .
-
-.PHONY: test
 test:
-	@go test ./...
+	$(GO) test -race -count=1 ./...
 
-.PHONY: clean
-clean:
-	@rm -rf ./bin
+test-integration:
+	$(GO) test -race -count=1 -tags integration ./internal/repo/repodb/ ./tests/integration/...
+
+# Generated protobuf, SQL bindings (internal/store, */*db), wiring (internal/app,
+# cmd) and test packages are exercised by the tagged integration suite and are
+# excluded from the unit gate on purpose.
+COVERPKG := $(shell $(GO) list ./... | grep -v -E '/api/|/internal/store$$|db$$|/internal/app$$|/valkeykv$$|/cmd/|/tests/|/ui|/internal/stream|/repotest' | paste -sd, -)
+
+cover:
+	$(GO) test -count=1 -coverprofile=$(COVER_OUT) -coverpkg=$(COVERPKG) $(PKGS)
+	./scripts/coverage-gate.sh $(COVER_OUT)
+
+generate:
+	buf generate
+
+# Build the federated UI remote (produces ui/dist consumed by the -tags ui build).
+ui-build:
+	cd ui && npm ci && npm run build
+
+# Build the service binary without the embedded UI.
+build:
+	$(GO) build -o bin/ticketsvc ./cmd/ticketsvc
+
+# Build the service binary with the embedded UI remote (requires ui-build first).
+build-ui: ui-build
+	$(GO) build -tags "ui" -o bin/ticketsvc ./cmd/ticketsvc
+
+# Build the container image; NODE_AUTH_TOKEN (read:packages) installs @go-tangra/ui.
+image:
+	DOCKER_BUILDKIT=1 docker buildx build --secret id=npm_token,env=NODE_AUTH_TOKEN -t go-tangra-ticket:dev .
+
