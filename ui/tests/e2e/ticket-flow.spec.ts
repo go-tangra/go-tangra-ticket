@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { base, signIn } from '../../../../gateway/shell/tests/e2e/helpers'
+import { base, signIn } from './helpers'
 
 // Quickstart flow for the ticket remote at the three reference widths:
 // mailboxes → tags → rules builder → new ticket → drawer (status/priority/
