@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { abilitiesPlugin } from '@casl/vue'
 import { createMongoAbility } from '@casl/ability'
-import { useConfirm } from '@freya/ui'
+import { useConfirm } from '@go-tangra/ui'
 import Rules from '@/views/rules/index.vue'
 import RuleDrawer from '@/views/rules/drawer.vue'
 import {

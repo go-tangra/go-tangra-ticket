@@ -5,8 +5,8 @@
 // that closes on save and then shows the created ticket.
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiForm, UiInput, UiSelect, UiButton, UiBadge, UiDataTable, UiPagination, UiStatusChip, UiRecordDrawer, UiLiveIndicator, type Column, type SelectOption } from '@freya/ui'
-import { useZodForm, zodToFields } from '@freya/ui/forms'
+import { UiPage, UiAlert, UiCard, UiForm, UiInput, UiSelect, UiButton, UiBadge, UiDataTable, UiPagination, UiStatusChip, UiRecordDrawer, UiLiveIndicator, type Column, type SelectOption } from '@go-tangra/ui'
+import { useZodForm, zodToFields } from '@go-tangra/ui/forms'
 import { useTickets } from '@/stores/tickets'
 import { coalesce, useLive } from '@/stores/live'
 import { PRIORITIES, PRIORITY_COLORS, PRIORITY_LABELS, STATUSES, STATUS_COLORS, STATUS_LABELS, ticketFilterSchema, ticketSchema } from '@/schemas'

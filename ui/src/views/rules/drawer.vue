@@ -7,7 +7,7 @@
 // the rule schema; the server's invalid_rule reason (e.g. a compiler message)
 // is shown verbatim.
 import { computed, reactive, ref, watch } from 'vue'
-import { UiDrawer, UiAlert, UiButton, UiBadge, UiInput, UiNumberInput, UiSection, UiSelect, UiSwitch, UiTextarea } from '@freya/ui'
+import { UiDrawer, UiAlert, UiButton, UiBadge, UiInput, UiNumberInput, UiSection, UiSelect, UiSwitch, UiTextarea } from '@go-tangra/ui'
 import {
   ACTION_TYPES, BOOL_VALUES, DROP_WARNING, MATCH_OPTIONS, PRIORITIES, PRIORITY_LABELS, RULE_FIELDS, STATUSES, STATUS_LABELS, TAG_KIND_OPTIONS,
   actionSummary, blankAction, blankCondition, fieldType, operatorsFor, ruleSchema, splitNames, toRuleInput,

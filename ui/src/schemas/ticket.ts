@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { nonEmpty, optionalString } from '@freya/ui/forms'
+import { nonEmpty, optionalString } from '@go-tangra/ui/forms'
 
 export const STATUSES = ['open', 'in_progress', 'pending', 'resolved', 'closed'] as const
 export const PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { email, optionalString } from '@freya/ui/forms'
+import { email, optionalString } from '@go-tangra/ui/forms'
 
 /** POST/PUT /mailboxes: an inbound support address routed to this tenant. */
 export const mailboxSchema = z.object({

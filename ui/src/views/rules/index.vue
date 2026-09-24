@@ -4,7 +4,7 @@
 // drawer; delete asks first.
 import { computed, onMounted, ref } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiSwitch, useConfirm, useToast, type Column } from '@freya/ui'
+import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiSwitch, useConfirm, useToast, type Column } from '@go-tangra/ui'
 import { useRules } from '@/stores/rules'
 import { useTickets } from '@/stores/tickets'
 import { actionSummary, ruleConditionSummary } from '@/schemas'

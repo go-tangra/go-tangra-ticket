@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { nonEmpty, optionalString } from '@freya/ui/forms'
+import { nonEmpty, optionalString } from '@go-tangra/ui/forms'
 import { TAG_COLORS } from '@/views/tags/colors'
 
 /** POST/PUT /tags: the kind only matters on create (it is fixed afterwards). */

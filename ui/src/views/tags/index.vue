@@ -5,8 +5,8 @@
 // tag from every ticket.
 import { computed, onMounted, ref } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, UiSelect, useConfirm, useToast, type Column, type SelectOption } from '@freya/ui'
-import { zodToFields } from '@freya/ui/forms'
+import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, UiSelect, useConfirm, useToast, type Column, type SelectOption } from '@go-tangra/ui'
+import { zodToFields } from '@go-tangra/ui/forms'
 import { useTags } from '@/stores/tags'
 import { tagSchema, TAG_KIND_OPTIONS } from '@/schemas'
 import { TAG_COLORS, TAG_COLOR_LABELS, tagColor } from './colors'

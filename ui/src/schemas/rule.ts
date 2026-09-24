@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { nonEmpty, optionalString } from '@freya/ui/forms'
+import { nonEmpty, optionalString } from '@go-tangra/ui/forms'
 import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS } from './ticket'
 import type { RuleAction, RuleActionType, RuleCondition, RuleInput } from '@/api/types'
 

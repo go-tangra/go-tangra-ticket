@@ -5,8 +5,8 @@
 // (export / import) for holders of backup:manage.
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiButton, UiSelect, UiStatGrid, UiStatTile, UiBarList, UiLiveIndicator, UiDataTable, UiForm, UiFilePicker, UiEmptyState, type BarItem, type Column, type SelectOption } from '@freya/ui'
-import { useZodForm } from '@freya/ui/forms'
+import { UiPage, UiAlert, UiCard, UiButton, UiSelect, UiStatGrid, UiStatTile, UiBarList, UiLiveIndicator, UiDataTable, UiForm, UiFilePicker, UiEmptyState, type BarItem, type Column, type SelectOption } from '@go-tangra/ui'
+import { useZodForm } from '@go-tangra/ui/forms'
 import { useStats } from '@/stores/stats'
 import { coalesce, useLive } from '@/stores/live'
 import { describe } from '@/api/client'

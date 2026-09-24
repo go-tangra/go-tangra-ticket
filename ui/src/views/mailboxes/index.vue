@@ -5,8 +5,8 @@
 // detach them.
 import { computed, onMounted, ref } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, useConfirm, useToast, type Column } from '@freya/ui'
-import { zodToFields } from '@freya/ui/forms'
+import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, useConfirm, useToast, type Column } from '@go-tangra/ui'
+import { zodToFields } from '@go-tangra/ui/forms'
 import { useMailboxes } from '@/stores/mailboxes'
 import { AUTO_ACK_HINT, mailboxSchema } from '@/schemas'
 import type { Mailbox, MailboxInput } from '@/api/types'

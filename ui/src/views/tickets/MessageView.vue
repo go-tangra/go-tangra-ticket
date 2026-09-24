@@ -7,7 +7,7 @@
 // nothing itself. A toggle shows the plain-text body; attachments download
 // through the tenant-checked route.
 import { computed, ref, watch } from 'vue'
-import { UiAlert, UiButton, UiIcon, UiSkeleton } from '@freya/ui'
+import { UiAlert, UiButton, UiIcon, UiSkeleton } from '@go-tangra/ui'
 import { useTickets } from '@/stores/tickets'
 import type { Attachment, Ticket } from '@/api/types'
 import { BASE, describe, fileUrl } from '@/api/client'
