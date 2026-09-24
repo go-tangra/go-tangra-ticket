@@ -3,14 +3,14 @@ package httpapi
 import (
 	"net/http"
 
-	"github.com/go-freya/freya/services/ticket/internal/backup"
-	"github.com/go-freya/freya/services/ticket/internal/comments"
-	"github.com/go-freya/freya/services/ticket/internal/mailboxes"
-	"github.com/go-freya/freya/services/ticket/internal/rules"
-	"github.com/go-freya/freya/services/ticket/internal/stats"
-	"github.com/go-freya/freya/services/ticket/internal/stream"
-	"github.com/go-freya/freya/services/ticket/internal/tags"
-	"github.com/go-freya/freya/services/ticket/internal/tickets"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/backup"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/comments"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailboxes"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/rules"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/stats"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/stream"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tags"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tickets"
 )
 
 // Prefix of the browser API.

@@ -9,7 +9,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 // Sentinel errors every implementation maps its failures to.

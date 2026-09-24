@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/comments"
-	"github.com/go-freya/freya/services/ticket/internal/store"
-	"github.com/go-freya/freya/services/ticket/internal/tickets"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/comments"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tickets"
 )
 
 // commentError maps the comments service's errors to the contract reasons.

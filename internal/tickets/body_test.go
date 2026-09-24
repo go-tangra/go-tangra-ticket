@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-freya/freya/services/ticket/internal/sanitize"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/sanitize"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 func (f *fixture) emailTicket(t *testing.T) (store.Ticket, store.Attachment) {

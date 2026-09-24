@@ -16,10 +16,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/inbound"
-	"github.com/go-freya/freya/services/ticket/internal/rules"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/inbound"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/rules"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 func TestRulesDriveInboundWiring(t *testing.T) {

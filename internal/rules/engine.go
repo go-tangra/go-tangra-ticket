@@ -26,8 +26,8 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/ext"
 
-	"github.com/go-freya/freya/services/ticket/internal/mailparse"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailparse"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 // Condition fields.

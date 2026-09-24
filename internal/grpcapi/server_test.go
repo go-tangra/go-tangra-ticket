@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	ticketv1 "github.com/go-freya/freya/services/ticket/api/proto/ticket/v1"
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/repo"
+	ticketv1 "github.com/go-tangra/go-tangra-ticket/v4/api/proto/ticket/v1"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
 )
 
 const tn = "0190f7c2-6a3e-7c1a-9b2e-2f6f9d1b4c55"

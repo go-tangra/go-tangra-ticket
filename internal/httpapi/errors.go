@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/repo"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
 )
 
 // Error is a refusal with a stable reason from the closed vocabulary of

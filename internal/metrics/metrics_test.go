@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 
-	"github.com/go-freya/freya/observe"
+	"github.com/go-tangra/go-tangra/v4/observe"
 )
 
 func TestCountersRenderOnAdminHandler(t *testing.T) {

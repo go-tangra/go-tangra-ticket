@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/go-freya/freya/services/ticket/internal/stream"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/stream"
 )
 
 // RegisterStream mounts GET /stream: a per-signed-in-user SSE stream of the

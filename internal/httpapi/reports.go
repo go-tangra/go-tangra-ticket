@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/backup"
-	"github.com/go-freya/freya/services/ticket/internal/stats"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/backup"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/stats"
 )
 
 // MaxImportBytes bounds a backup import body (matches the route's declared

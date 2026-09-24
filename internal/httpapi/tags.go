@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/tags"
-	"github.com/go-freya/freya/services/ticket/internal/tickets"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tags"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tickets"
 )
 
 // tagError maps the tags service's errors to the contract reasons.

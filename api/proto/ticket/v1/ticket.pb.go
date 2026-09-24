@@ -823,7 +823,7 @@ const file_ticket_v1_ticket_proto_rawDesc = "" +
 	"\x03Get\x12\x1b.ticket.v1.GetTicketRequest\x1a\x11.ticket.v1.Ticket\x12E\n" +
 	"\x04List\x12\x1d.ticket.v1.ListTicketsRequest\x1a\x1e.ticket.v1.ListTicketsResponse\x12>\n" +
 	"\n" +
-	"AddComment\x12\x1c.ticket.v1.AddCommentRequest\x1a\x12.ticket.v1.CommentBHZFgithub.com/go-freya/freya/services/ticket/api/proto/ticket/v1;ticketv1b\x06proto3"
+	"AddComment\x12\x1c.ticket.v1.AddCommentRequest\x1a\x12.ticket.v1.CommentBGZEgithub.com/go-tangra/go-tangra-ticket/v4/api/proto/ticket/v1;ticketv1b\x06proto3"
 
 var (
 	file_ticket_v1_ticket_proto_rawDescOnce sync.Once

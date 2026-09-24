@@ -16,10 +16,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/go-freya/freya/services/ticket/internal/audit"
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/repo"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 // Errors.

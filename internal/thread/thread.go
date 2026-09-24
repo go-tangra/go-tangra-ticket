@@ -17,8 +17,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/go-freya/freya/services/ticket/internal/repo"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 // ErrTenant is returned by Resolve without a tenant.

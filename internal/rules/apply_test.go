@@ -12,16 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-freya/freya/observe"
-	"github.com/go-freya/freya/services/ticket/internal/agents"
-	"github.com/go-freya/freya/services/ticket/internal/audit"
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/inbound"
-	"github.com/go-freya/freya/services/ticket/internal/mailparse"
-	"github.com/go-freya/freya/services/ticket/internal/memstore"
-	"github.com/go-freya/freya/services/ticket/internal/metrics"
-	"github.com/go-freya/freya/services/ticket/internal/store"
-	"github.com/go-freya/freya/services/ticket/internal/tickets"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/inbound"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailparse"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/memstore"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/metrics"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tickets"
+	"github.com/go-tangra/go-tangra/v4/observe"
 )
 
 const (

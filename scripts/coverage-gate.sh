@@ -6,7 +6,7 @@
 # executable program there).
 set -euo pipefail
 PROFILE="${1:-coverage.out}"
-MODULE="github.com/go-freya/freya/services/ticket"
+MODULE="github.com/go-tangra/go-tangra-ticket/v4"
 SECURITY_PKGS=("internal/authz" "internal/sealed" "internal/secrets" "internal/thread")
 # Functions of internal/rules/engine.go that form the compile path. (NewEngine is
 # excluded: its only uncovered branch is the static CEL environment failing to

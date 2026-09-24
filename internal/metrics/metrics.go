@@ -20,7 +20,7 @@ import (
 )
 
 // Scope is the instrumentation scope name.
-const Scope = "github.com/go-freya/freya/services/ticket"
+const Scope = "github.com/go-tangra/go-tangra-ticket/v4"
 
 // Inbound outcomes.
 const (

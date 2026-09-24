@@ -19,8 +19,8 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 
-	"github.com/go-freya/freya/services/ticket/internal/mailparse"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailparse"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 // Body is the /tickets/{id}/body response.

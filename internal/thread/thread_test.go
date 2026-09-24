@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-freya/freya/services/ticket/internal/memstore"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/memstore"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 const id = "0190f7c2-6a3e-7c1a-9b2e-2f6f9d1b4c55"

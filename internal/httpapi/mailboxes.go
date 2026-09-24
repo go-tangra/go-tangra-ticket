@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/mailboxes"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailboxes"
 )
 
 // mailboxError maps the mailboxes service's errors to the contract reasons.

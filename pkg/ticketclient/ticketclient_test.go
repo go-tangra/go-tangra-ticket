@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
-	ticketv1 "github.com/go-freya/freya/services/ticket/api/proto/ticket/v1"
-	"github.com/go-freya/freya/services/ticket/pkg/ticketclient"
+	ticketv1 "github.com/go-tangra/go-tangra-ticket/v4/api/proto/ticket/v1"
+	"github.com/go-tangra/go-tangra-ticket/v4/pkg/ticketclient"
 )
 
 type stub struct {

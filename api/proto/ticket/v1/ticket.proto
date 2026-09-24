@@ -9,7 +9,7 @@ syntax = "proto3";
 // requester secrets or relay/SMTP credentials.
 package ticket.v1;
 
-option go_package = "github.com/go-freya/freya/services/ticket/api/proto/ticket/v1;ticketv1";
+option go_package = "github.com/go-tangra/go-tangra-ticket/v4/api/proto/ticket/v1;ticketv1";
 
 // Timestamp is seconds since the epoch; 0 = unset.
 message Timestamp { int64 unix = 1; }

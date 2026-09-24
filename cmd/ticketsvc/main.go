@@ -11,10 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/go-freya/freya/services/ticket/internal/app"
-	"github.com/go-freya/freya/services/ticket/internal/config"
-	"github.com/go-freya/freya/services/ticket/internal/store"
-	"github.com/go-freya/freya/services/ticket/ui"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/app"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/config"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/ui"
 )
 
 func main() {

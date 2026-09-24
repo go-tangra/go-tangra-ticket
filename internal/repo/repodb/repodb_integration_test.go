@@ -27,10 +27,10 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/go-freya/freya/services/ticket/internal/repo"
-	"github.com/go-freya/freya/services/ticket/internal/repo/repodb"
-	"github.com/go-freya/freya/services/ticket/internal/repo/repotest"
-	"github.com/go-freya/freya/services/ticket/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo/repodb"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo/repotest"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 type dbEnv struct {

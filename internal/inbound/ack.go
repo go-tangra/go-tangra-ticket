@@ -24,13 +24,13 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/go-freya/freya/services/ticket/internal/audit"
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/mailer"
-	"github.com/go-freya/freya/services/ticket/internal/mailparse"
-	"github.com/go-freya/freya/services/ticket/internal/metrics"
-	"github.com/go-freya/freya/services/ticket/internal/store"
-	"github.com/go-freya/freya/services/ticket/internal/thread"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailer"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailparse"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/metrics"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/thread"
 )
 
 // Reasons an acknowledgement is skipped (audit ack.skipped).

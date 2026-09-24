@@ -1,4 +1,4 @@
-module github.com/go-freya/freya/services/ticket
+module github.com/go-tangra/go-tangra-ticket/v4
 
 go 1.26.3
 
@@ -6,11 +6,11 @@ toolchain go1.26.8
 
 require (
 	github.com/getkin/kin-openapi v0.149.0
-	github.com/go-freya/freya v0.0.0-00010101000000-000000000000
-	github.com/go-freya/freya/services/auth v0.0.0-00010101000000-000000000000
-	github.com/go-freya/freya/services/gateway v0.0.0-00010101000000-000000000000
-	github.com/go-freya/freya/services/lcm v0.0.0-00010101000000-000000000000
-	github.com/go-freya/freya/services/warden v0.0.0-00010101000000-000000000000
+	github.com/go-tangra/go-tangra-auth/sdk/v4 v4.0.0
+	github.com/go-tangra/go-tangra-lcm/sdk/v4 v4.0.0
+	github.com/go-tangra/go-tangra-portal/sdk/v4 v4.0.0
+	github.com/go-tangra/go-tangra-warden/sdk/v4 v4.0.0
+	github.com/go-tangra/go-tangra/v4 v4.0.0
 	github.com/google/cel-go v0.31.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/microcosm-cc/bluemonday v1.0.27
@@ -86,6 +86,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
+	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/sethvargo/go-retry v0.4.0 // indirect
@@ -113,13 +114,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260831171406-18b4a7587f8a // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
 )
-
-replace github.com/go-freya/freya => ../..
-
-replace github.com/go-freya/freya/services/auth => ../auth
-
-replace github.com/go-freya/freya/services/gateway => ../gateway
-
-replace github.com/go-freya/freya/services/lcm => ../lcm
-
-replace github.com/go-freya/freya/services/warden => ../warden

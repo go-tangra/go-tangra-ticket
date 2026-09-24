@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	authv1 "github.com/go-freya/freya/services/auth/api/proto/auth/v1"
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/pkg/ticketmanifest"
+	authv1 "github.com/go-tangra/go-tangra-auth/sdk/v4/api/proto/auth/v1"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/pkg/ticketmanifest"
 )
 
 // AuthPerms answers API-permission questions through the auth service's

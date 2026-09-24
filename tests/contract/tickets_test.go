@@ -21,18 +21,18 @@ import (
 	"github.com/getkin/kin-openapi/routers"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
 
-	"github.com/go-freya/freya/internal/testrt"
-	"github.com/go-freya/freya/internal/testutil"
-	"github.com/go-freya/freya/services/auth/pkg/authclient"
+	"github.com/go-tangra/go-tangra-auth/sdk/v4/pkg/authclient"
+	"github.com/go-tangra/go-tangra/v4/freyatest/testrt"
+	"github.com/go-tangra/go-tangra/v4/freyatest/testutil"
 
-	"github.com/go-freya/freya/services/ticket/internal/agents"
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/blob"
-	"github.com/go-freya/freya/services/ticket/internal/events"
-	"github.com/go-freya/freya/services/ticket/internal/httpapi"
-	"github.com/go-freya/freya/services/ticket/internal/memstore"
-	"github.com/go-freya/freya/services/ticket/internal/store"
-	"github.com/go-freya/freya/services/ticket/internal/tickets"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/blob"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/events"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/httpapi"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/memstore"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tickets"
 )
 
 const (

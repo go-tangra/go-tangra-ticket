@@ -8,8 +8,8 @@ package events
 import (
 	"context"
 
-	"github.com/go-freya/freya/services/ticket/internal/store"
-	"github.com/go-freya/freya/services/ticket/internal/stream"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/stream"
 )
 
 // Event types published to platform:events:<tenant>.

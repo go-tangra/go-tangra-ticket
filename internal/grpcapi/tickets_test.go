@@ -9,12 +9,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	ticketv1 "github.com/go-freya/freya/services/ticket/api/proto/ticket/v1"
-	"github.com/go-freya/freya/services/ticket/internal/agents"
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/memstore"
-	"github.com/go-freya/freya/services/ticket/internal/store"
-	"github.com/go-freya/freya/services/ticket/internal/tickets"
+	ticketv1 "github.com/go-tangra/go-tangra-ticket/v4/api/proto/ticket/v1"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/memstore"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/tickets"
 )
 
 const (

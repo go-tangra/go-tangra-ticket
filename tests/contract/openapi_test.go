@@ -12,13 +12,13 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/go-freya/freya/internal/testrt"
-	"github.com/go-freya/freya/internal/testutil"
+	"github.com/go-tangra/go-tangra/v4/freyatest/testrt"
+	"github.com/go-tangra/go-tangra/v4/freyatest/testutil"
 
-	"github.com/go-freya/freya/services/ticket/internal/authz"
-	"github.com/go-freya/freya/services/ticket/internal/httpapi"
-	"github.com/go-freya/freya/services/ticket/internal/stream"
-	"github.com/go-freya/freya/services/ticket/pkg/ticketmanifest"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/httpapi"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/stream"
+	"github.com/go-tangra/go-tangra-ticket/v4/pkg/ticketmanifest"
 )
 
 // contractRoutes are the routes of contracts/ticket-api.md §A.
