@@ -66,7 +66,7 @@ Other services call it through `pkg/ticketclient` and the `ticket.v1` protos
 | `internal/backup`, `internal/stats`, `internal/audit`, `internal/metrics` | backup export/import, statistics, audit, metrics |
 | `internal/httpapi`, `internal/grpcapi` | browser and service APIs |
 | `internal/app`, `cmd/ticketsvc` | wiring and the service binary (serve, `bootstrap`, `version`) |
-| `pkg/ticketmanifest` | gateway manifest and built-in role grants |
+| `pkg/ticketmanifest` | gateway manifest, module roles and built-in role grants |
 | `pkg/ticketclient` | Go client other services use |
 | `testdata/mail` | `.eml` fixture corpus (parser, sanitiser, threading, loop safety) |
 | `deploy` | service policy and operations notes |
@@ -141,9 +141,23 @@ created on start when missing.
 
 `tickets:read/manage/delete`, `tags:manage`, `mailboxes:manage`, `rules:manage`,
 `stats:read`, `backup:manage`. The gateway enforces the per-route permission from
-the manifest; the module then checks the tenant scope. The module seeds the roles
-`ticket admin`, `ticket agent` and `ticket viewer` and the built-in role grants
-(`pkg/ticketmanifest.Grants`).
+the manifest; the module then checks the tenant scope.
+
+## Roles
+
+The module registers its permissions with auth at start and every five
+minutes, together with ready-made module roles that auth offers in every
+tenant (locked; administrators assign them or clone them into custom roles):
+
+| Role | Display name | Permissions |
+|---|---|---|
+| `administrator` | Tickets administrator | all 8 |
+| `agent` | Tickets agent | `tickets:read`, `tickets:manage`, `tags:manage` |
+| `viewer` | Tickets viewer | `tickets:read` |
+
+Built-in role grants (scoped to the ticket module by auth,
+`pkg/ticketmanifest.Grants`): `owner` and `admin` hold the administrator set,
+`operator` the agent set, `member` and `auditor` the viewer set.
 
 ## Versioning
 

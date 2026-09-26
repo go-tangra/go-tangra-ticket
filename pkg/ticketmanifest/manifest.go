@@ -1,22 +1,21 @@
 // Package ticketmanifest declares what the ticket (helpdesk) module registers
 // with the application gateway: routes derived from the embedded OpenAPI
 // document, the API permissions, the CASL abilities and the navigation
-// entries; plus the built-in role grants it seeds with the auth service. The
-// ticket gRPC surface is service-to-service and is not proxied by the gateway,
-// and the inbound mail edge is a separate, non-gateway listener.
+// entries; plus the module roles and built-in role grants it registers with the
+// auth service. The ticket gRPC surface is service-to-service and is not
+// proxied by the gateway, and the inbound mail edge is a separate, non-gateway
+// listener.
 package ticketmanifest
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"google.golang.org/grpc"
 
-	authv1 "github.com/go-tangra/go-tangra-auth/sdk/v4/api/proto/auth/v1"
+	"github.com/go-tangra/go-tangra-auth/sdk/v4/pkg/authclient"
 	"github.com/go-tangra/go-tangra-portal/sdk/v4/pkg/gatewayclient"
 	"github.com/go-tangra/go-tangra-ticket/v4/api/openapi"
 )
@@ -50,22 +49,42 @@ var Permissions = []gatewayclient.Permission{
 	{Resource: "backup", Action: "manage", Description: "Export and import tenant ticket data"},
 }
 
-// Module roles (research D11): what each seeded role may do.
-var Roles = map[string][]string{
-	"ticket admin":  PermissionRefs(),
-	"ticket agent":  {"tickets:read", "tickets:manage", "tags:manage"},
-	"ticket viewer": {"tickets:read"},
+// Permission sets of the module roles (research D11).
+var (
+	adminPermissions  = PermissionRefs()
+	agentPermissions  = []string{"tickets:read", "tickets:manage", "tags:manage"}
+	viewerPermissions = []string{"tickets:read"}
+)
+
+// Roles is the module's role set (feature 019): ready-made roles auth offers in
+// every tenant, locked there (administrators assign or clone them).
+var Roles = []authclient.ModuleRole{
+	{
+		Slug: "administrator", DisplayName: DisplayName + " administrator",
+		Description: "Full helpdesk management: tickets, deletion, tags, rules, mailboxes, statistics and backups",
+		Permissions: adminPermissions,
+	},
+	{
+		Slug: "agent", DisplayName: DisplayName + " agent",
+		Description: "Work tickets: read, edit, assign, change status, reply and tag",
+		Permissions: agentPermissions,
+	},
+	{
+		Slug: "viewer", DisplayName: DisplayName + " viewer",
+		Description: "Read tickets and their conversations",
+		Permissions: viewerPermissions,
+	},
 }
 
-// Grants maps the platform's built-in role slugs to the module roles: owners
-// and admins are ticket admins, operators are ticket agents, members and
-// auditors are ticket viewers.
+// Grants maps the platform's built-in role slugs to the module role
+// permission sets: owners and admins hold the administrator set, operators
+// the agent set, members and auditors the viewer set.
 var Grants = map[string][]string{
-	"owner":    Roles["ticket admin"],
-	"admin":    Roles["ticket admin"],
-	"operator": Roles["ticket agent"],
-	"member":   Roles["ticket viewer"],
-	"auditor":  Roles["ticket viewer"],
+	"owner":    adminPermissions,
+	"admin":    adminPermissions,
+	"operator": agentPermissions,
+	"member":   viewerPermissions,
+	"auditor":  viewerPermissions,
 }
 
 // Methods proxied by the gateway: none (ticket gRPC is service to service).
@@ -171,27 +190,15 @@ func Manifest() (gatewayclient.Manifest, error) {
 	}, nil
 }
 
-// BuiltinRoles lists the built-in role slugs seeded, in a stable order.
+// BuiltinRoles lists the built-in role slugs granted, in a stable order.
 var BuiltinRoles = []string{"owner", "admin", "member", "auditor", "operator"}
 
-// SeedRequest builds the auth registration request: every module permission
-// plus the built-in role grants.
-func SeedRequest() *authv1.RegisterPermissionsRequest {
-	req := &authv1.RegisterPermissionsRequest{}
+// Registration is what the module registers with auth: every module
+// permission, the module roles and the built-in role grants.
+func Registration() authclient.Registration {
+	reg := authclient.Registration{Module: Module, DisplayName: DisplayName, Roles: Roles, BuiltinGrants: Grants}
 	for _, p := range Permissions {
-		req.Permissions = append(req.Permissions, &authv1.PermissionDef{Resource: p.Resource, Action: p.Action, Description: p.Description})
+		reg.Permissions = append(reg.Permissions, authclient.Permission{Resource: p.Resource, Action: p.Action, Description: p.Description})
 	}
-	for _, slug := range BuiltinRoles {
-		req.BuiltinGrants = append(req.BuiltinGrants, &authv1.BuiltinGrant{Role: slug, Permissions: Grants[slug]})
-	}
-	return req
-}
-
-// SeedPermissions registers the module's permissions with the auth service and
-// grants them to the built-in roles (idempotent).
-func SeedPermissions(ctx context.Context, cc grpc.ClientConnInterface) error {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	_, err := authv1.NewAuthorizationClient(cc).RegisterPermissions(ctx, SeedRequest())
-	return err
+	return reg
 }
