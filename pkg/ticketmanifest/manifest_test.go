@@ -1,16 +1,14 @@
 package ticketmanifest
 
 import (
-	"context"
-	"errors"
+	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"google.golang.org/grpc"
 
-	authv1 "github.com/go-tangra/go-tangra-auth/sdk/v4/api/proto/auth/v1"
 	"github.com/go-tangra/go-tangra-ticket/v4/api/openapi"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 )
@@ -76,30 +74,80 @@ func TestPermissionsMatchAuthz(t *testing.T) {
 	}
 }
 
-func TestRolesAndGrants(t *testing.T) {
-	if len(Roles["ticket admin"]) != 8 {
-		t.Fatal("admin must hold everything")
+// TestRoles pins the module role set (feature 019, research D9).
+func TestRoles(t *testing.T) {
+	want := map[string][]string{
+		"administrator": PermissionRefs(),
+		"agent":         {"tickets:read", "tickets:manage", "tags:manage"},
+		"viewer":        {"tickets:read"},
 	}
-	agent := strings.Join(Roles["ticket agent"], ",")
-	if agent != "tickets:read,tickets:manage,tags:manage" {
-		t.Fatalf("agent = %s", agent)
+	names := map[string]string{"administrator": "Tickets administrator", "agent": "Tickets agent", "viewer": "Tickets viewer"}
+	if len(Roles) != len(want) {
+		t.Fatalf("want %d roles, got %d", len(want), len(Roles))
 	}
-	if strings.Join(Roles["ticket viewer"], ",") != "tickets:read" {
-		t.Fatal("viewer")
+	own := map[string]bool{}
+	for _, r := range PermissionRefs() {
+		own[r] = true
+	}
+	slug := regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$`)
+	for _, r := range Roles {
+		if !slug.MatchString(r.Slug) {
+			t.Errorf("role slug %q", r.Slug)
+		}
+		if r.DisplayName != names[r.Slug] || r.Description == "" {
+			t.Errorf("role %q: display name %q, description %q", r.Slug, r.DisplayName, r.Description)
+		}
+		if !reflect.DeepEqual(r.Permissions, want[r.Slug]) {
+			t.Errorf("role %q: permissions %v, want %v", r.Slug, r.Permissions, want[r.Slug])
+		}
+		for _, p := range r.Permissions {
+			if !own[p] {
+				t.Errorf("role %q names %q, not a ticket permission", r.Slug, p)
+			}
+		}
+	}
+}
+
+// TestBuiltinGrantsUnchanged: the built-in grants are those registered before
+// module roles existed (auth now scopes them to the module).
+func TestBuiltinGrantsUnchanged(t *testing.T) {
+	admin := []string{"tickets:read", "tickets:manage", "tickets:delete", "tags:manage", "rules:manage", "mailboxes:manage", "stats:read", "backup:manage"}
+	agent := []string{"tickets:read", "tickets:manage", "tags:manage"}
+	viewer := []string{"tickets:read"}
+	want := map[string][]string{"owner": admin, "admin": admin, "operator": agent, "member": viewer, "auditor": viewer}
+	if !reflect.DeepEqual(Grants, want) {
+		t.Fatalf("built-in grants changed:\n got %v\nwant %v", Grants, want)
 	}
 	for _, slug := range BuiltinRoles {
 		if len(Grants[slug]) == 0 {
 			t.Fatalf("no grant for %s", slug)
 		}
 	}
-	for _, r := range Grants["operator"] {
-		if r == "tickets:delete" || r == "backup:manage" || r == "rules:manage" {
-			t.Fatalf("operator over-granted: %s", r)
-		}
+	if len(BuiltinRoles) != len(Grants) {
+		t.Fatalf("BuiltinRoles %v vs grants %v", BuiltinRoles, Grants)
 	}
-	req := SeedRequest()
-	if len(req.GetPermissions()) != 8 || len(req.GetBuiltinGrants()) != 5 {
-		t.Fatalf("seed = %+v", req)
+}
+
+// TestRegistration: the auth registration carries the module identity, every
+// permission, the complete role set and the built-in grants, and is valid.
+func TestRegistration(t *testing.T) {
+	reg := Registration()
+	if err := reg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	req := reg.Request()
+	if req.GetModule() != "ticket" || req.GetModuleDisplayName() != "Tickets" || !req.GetDeclaresRoles() {
+		t.Fatalf("module %q display %q declares_roles %v", req.GetModule(), req.GetModuleDisplayName(), req.GetDeclaresRoles())
+	}
+	if len(req.GetPermissions()) != 8 || len(req.GetRoles()) != 3 {
+		t.Fatalf("%d permissions, %d roles", len(req.GetPermissions()), len(req.GetRoles()))
+	}
+	got := map[string][]string{}
+	for _, g := range req.GetBuiltinGrants() {
+		got[g.GetRole()] = g.GetPermissions()
+	}
+	if !reflect.DeepEqual(got, Grants) {
+		t.Fatalf("builtin grants %v", got)
 	}
 }
 
@@ -130,30 +178,5 @@ func TestRoutesValidationBranches(t *testing.T) {
 		if _, err := Routes(docWith(ext)); err == nil {
 			t.Errorf("case %d accepted", i)
 		}
-	}
-}
-
-type fakeAuthz struct {
-	grpc.ClientConnInterface
-	got *authv1.RegisterPermissionsRequest
-	err error
-}
-
-func (f *fakeAuthz) Invoke(_ context.Context, method string, args, _ any, _ ...grpc.CallOption) error {
-	if !strings.HasSuffix(method, "/RegisterPermissions") {
-		return errors.New("unexpected " + method)
-	}
-	f.got = args.(*authv1.RegisterPermissionsRequest)
-	return f.err
-}
-
-func TestSeedPermissions(t *testing.T) {
-	f := &fakeAuthz{}
-	if err := SeedPermissions(context.Background(), f); err != nil || f.got == nil {
-		t.Fatalf("seed: %v", err)
-	}
-	f.err = errors.New("auth down")
-	if err := SeedPermissions(context.Background(), f); err == nil {
-		t.Fatal("error swallowed")
 	}
 }

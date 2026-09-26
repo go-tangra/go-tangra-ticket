@@ -23,7 +23,7 @@ mail edge.
 | KEK | 32-byte key (`kek.source: file|env`, `deploy/kek.dev` for development only) |
 | Object store | S3-compatible (`object_store`; RustFS in the stack), bucket self-provisioned at start |
 | Mesh identity | enrolls with lcm through the gateway edge (`mesh_enroll`), stores its SVID in `/state` |
-| Gateway | registers its manifest (routes, permissions, abilities, nav) on a lease; seeds the roles `ticket admin` / `ticket agent` / `ticket viewer` into auth |
+| Gateway | registers its manifest (routes, permissions, abilities, nav) on a lease; registers the module roles `administrator` / `agent` / `viewer` (Tickets administrator/agent/viewer) and built-in grants with auth |
 
 Every `ticket_*` table carries `tenant_id` under **row-level security**. The
 only cross-tenant read is `ticket_route_mailbox(address)` (SECURITY DEFINER,
