@@ -72,6 +72,12 @@ message TicketFilter {
 message ListTicketsRequest {
   string tenant_id = 1;
   TicketFilter filter = 2;
+  // Optional order: sort is one of subject, status, priority, assignee,
+  // created_at, updated_at; order is "asc" or "desc" (default: the field's own
+  // direction). Both empty keep the default order (created_at, newest first).
+  // Unknown values are refused with InvalidArgument.
+  string sort = 3;
+  string order = 4;
 }
 
 message ListTicketsResponse {

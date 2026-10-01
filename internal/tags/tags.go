@@ -18,6 +18,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
@@ -164,23 +166,17 @@ func summary(t store.Tag) map[string]any {
 	return map[string]any{"name": t.Name, "kind": t.Kind, "color": t.Color}
 }
 
-// List returns the tenant's tags by kind and name ("" kind = every kind).
-func (s *Service) List(ctx context.Context, subj authz.Subjects, kind string) ([]store.Tag, error) {
+// List returns one page of the tenant's tags ("" kind = every kind) in req's
+// order (store.TagList), the total and the applied (clamped) request.
+func (s *Service) List(ctx context.Context, subj authz.Subjects, kind string, req listquery.Request) ([]store.Tag, int, listquery.Request, error) {
 	tenantID, err := tenantOf(subj)
 	if err != nil {
-		return nil, err
+		return nil, 0, req, err
 	}
 	if kind != "" && !store.ValidKind(kind) {
-		return nil, ValidationError{"kind", "tag or category"}
+		return nil, 0, req, ValidationError{"kind", "tag or category"}
 	}
-	out, err := s.d.Store.ListTags(ctx, tenantID, kind)
-	if err != nil {
-		return nil, err
-	}
-	if out == nil {
-		out = []store.Tag{}
-	}
-	return out, nil
+	return s.d.Store.PageTags(ctx, tenantID, kind, req)
 }
 
 // Create adds a tag (kind tag unless given); ErrConflict when the name is used

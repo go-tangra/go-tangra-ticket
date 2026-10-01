@@ -61,6 +61,9 @@ type NewTicket struct {
 type Filter struct {
 	Status, Priority, AssigneeID, TagID, Query string
 	Page, PageSize                             int
+	// Sort (subject, status, priority, assignee, created_at, updated_at) and
+	// Order ("asc"/"desc") are optional; empty keeps newest first.
+	Sort, Order string
 }
 
 // Page is one page of List results.
@@ -95,7 +98,7 @@ func (c *Client) List(ctx context.Context, tenantID string, f Filter) (Page, err
 	res, err := c.tickets.List(ctx, &ticketv1.ListTicketsRequest{TenantId: tenantID, Filter: &ticketv1.TicketFilter{
 		Status: f.Status, Priority: f.Priority, AssigneeId: f.AssigneeID, TagId: f.TagID, Query: f.Query,
 		Page: clamp32(f.Page), PageSize: clamp32(f.PageSize),
-	}})
+	}, Sort: f.Sort, Order: f.Order})
 	if err != nil {
 		return Page{}, err
 	}

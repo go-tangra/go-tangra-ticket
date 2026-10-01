@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/memstore"
@@ -225,25 +227,33 @@ func TestDeleteRemovesLinks(t *testing.T) {
 
 func TestListByKind(t *testing.T) {
 	svc, st, _ := newSvc()
+	def, _ := listquery.New(0, 0, "", "", store.TagList)
 	_, _ = svc.Create(ctx, agent(tenantA), Input{Name: ptr("t1")})
 	_, _ = svc.Create(ctx, agent(tenantA), Input{Name: ptr("c1"), Kind: ptr(store.KindCategory)})
-	all, err := svc.List(ctx, agent(tenantA), "")
-	if err != nil || len(all) != 2 {
+	all, total, _, err := svc.List(ctx, agent(tenantA), "", def)
+	if err != nil || len(all) != 2 || total != 2 {
 		t.Fatalf("all = %+v %v", all, err)
 	}
-	cats, _ := svc.List(ctx, agent(tenantA), store.KindCategory)
+	cats, _, _, _ := svc.List(ctx, agent(tenantA), store.KindCategory, def)
 	if len(cats) != 1 || cats[0].Name != "c1" {
 		t.Fatalf("categories = %+v", cats)
 	}
 	var ve ValidationError
-	if _, err := svc.List(ctx, agent(tenantA), "label"); !errors.As(err, &ve) {
+	if _, _, _, err := svc.List(ctx, agent(tenantA), "label", def); !errors.As(err, &ve) {
 		t.Fatalf("bad kind = %v", err)
 	}
-	if b, _ := svc.List(ctx, agent(tenantB), ""); len(b) != 0 {
+	if b, _, _, _ := svc.List(ctx, agent(tenantB), "", def); len(b) != 0 {
 		t.Fatal("tenant leak")
 	}
 	st.FailNext("ListTags")
-	if _, err := svc.List(ctx, agent(tenantA), ""); err == nil {
+	if _, _, _, err := svc.List(ctx, agent(tenantA), "", def); err == nil {
 		t.Fatal("store failure hidden")
+	}
+	st.FailNext("PageTags")
+	if _, _, _, err := svc.List(ctx, agent(tenantA), "", def); err == nil {
+		t.Fatal("page failure hidden")
+	}
+	if _, _, _, err := svc.List(ctx, authz.Subjects{}, "", def); err == nil {
+		t.Fatal("tenantless caller listed tags")
 	}
 }

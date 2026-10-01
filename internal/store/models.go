@@ -275,35 +275,16 @@ type AuditRow struct {
 // AssigneeNone is the filter value selecting unassigned tickets.
 const AssigneeNone = "none"
 
-// TicketFilter selects a page of tickets (newest first). AssigneeID "none"
-// selects unassigned tickets; Query matches subject/requester (case-insensitive).
+// TicketFilter selects tickets; paging and order come with a
+// listquery.Request (TicketList). AssigneeID "none" selects unassigned tickets;
+// Query matches subject/requester (case-insensitive).
 type TicketFilter struct {
 	Status     string
 	Priority   string
 	AssigneeID string
 	TagID      string
 	Query      string
-	Page       int // 1-based; <=0 means 1
-	PageSize   int // <=0 means 25
 }
-
-// Normalized returns the filter with paging defaults applied and the page size
-// capped at max.
-func (f TicketFilter) Normalized(max int) TicketFilter {
-	if f.Page <= 0 {
-		f.Page = 1
-	}
-	if f.PageSize <= 0 {
-		f.PageSize = 25
-	}
-	if max > 0 && f.PageSize > max {
-		f.PageSize = max
-	}
-	return f
-}
-
-// Offset is the row offset of the page.
-func (f TicketFilter) Offset() int { return (f.Page - 1) * f.PageSize }
 
 // TicketPatch carries the partial update of a ticket's editable fields; nil
 // leaves a field unchanged.

@@ -89,12 +89,15 @@ func TestClient(t *testing.T) {
 		t.Fatalf("get missing: %v", err)
 	}
 
-	page, err := c.List(ctx, "ten", ticketclient.Filter{Status: "open", AssigneeID: "none", Page: 2, PageSize: 25})
+	page, err := c.List(ctx, "ten", ticketclient.Filter{Status: "open", AssigneeID: "none", Page: 2, PageSize: 25, Sort: "priority", Order: "desc"})
 	if err != nil || len(page.Items) != 2 || page.Total != 7 {
 		t.Fatalf("list: %+v %v", page, err)
 	}
 	if f := s.last.(*ticketv1.ListTicketsRequest).GetFilter(); f.GetStatus() != "open" || f.GetAssigneeId() != "none" || f.GetPage() != 2 || f.GetPageSize() != 25 {
 		t.Fatalf("list filter: %+v", f)
+	}
+	if r := s.last.(*ticketv1.ListTicketsRequest); r.GetSort() != "priority" || r.GetOrder() != "desc" {
+		t.Fatalf("list order: %+v", r)
 	}
 	if _, err := c.List(ctx, "ten", ticketclient.Filter{Page: -5, PageSize: 1 << 40}); err != nil {
 		t.Fatal(err)

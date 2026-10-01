@@ -9,6 +9,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
@@ -26,8 +28,10 @@ type Tickets interface {
 	GetTicket(ctx context.Context, tenantID, id string) (store.Ticket, error)
 	// FindTicketByExternalID resolves an inbound root message id.
 	FindTicketByExternalID(ctx context.Context, tenantID, externalID string) (store.Ticket, error)
-	// ListTickets returns one page (newest first) plus the total match count.
-	ListTickets(ctx context.Context, tenantID string, f store.TicketFilter) ([]store.Ticket, int64, error)
+	// ListTickets counts the tickets matching f, clamps req to the last page and
+	// returns that page in req's order (store.TicketList) with the total and
+	// the applied request.
+	ListTickets(ctx context.Context, tenantID string, f store.TicketFilter, req listquery.Request) ([]store.Ticket, int, listquery.Request, error)
 	// UpdateTicket applies a partial update of subject/description/priority.
 	UpdateTicket(ctx context.Context, tenantID, id string, p store.TicketPatch, at time.Time) (store.Ticket, error)
 	// SetAssignee sets (or with "" clears) the assignee and its denormalised name.
@@ -80,6 +84,9 @@ type Tags interface {
 	GetTag(ctx context.Context, tenantID, id string) (store.Tag, error)
 	// ListTags lists the tenant's tags by name ("" kind = every kind).
 	ListTags(ctx context.Context, tenantID, kind string) ([]store.Tag, error)
+	// PageTags returns one page of the tenant's tags (store.TagList; "" kind =
+	// every kind), the total and the applied (clamped) request.
+	PageTags(ctx context.Context, tenantID, kind string, req listquery.Request) ([]store.Tag, int, listquery.Request, error)
 	// UpdateTag writes name/color/description (the kind is immutable).
 	UpdateTag(ctx context.Context, t store.Tag) error
 	DeleteTag(ctx context.Context, tenantID, id string) error
@@ -101,6 +108,9 @@ type Rules interface {
 	GetRule(ctx context.Context, tenantID, id string) (store.Rule, error)
 	// ListRules lists every rule by sort order, then name.
 	ListRules(ctx context.Context, tenantID string) ([]store.Rule, error)
+	// PageRules returns one page of the tenant's rules (store.RuleList), the
+	// total and the applied (clamped) request.
+	PageRules(ctx context.Context, tenantID string, req listquery.Request) ([]store.Rule, int, listquery.Request, error)
 	// ListEnabledRules lists the enabled rules in evaluation order.
 	ListEnabledRules(ctx context.Context, tenantID string) ([]store.Rule, error)
 	// UpdateRule writes the rule and bumps its version; the stored rule is returned.
@@ -114,6 +124,9 @@ type Mailboxes interface {
 	CreateMailbox(ctx context.Context, m store.Mailbox) error
 	GetMailbox(ctx context.Context, tenantID, id string) (store.Mailbox, error)
 	ListMailboxes(ctx context.Context, tenantID string) ([]store.Mailbox, error)
+	// PageMailboxes returns one page of the tenant's mailboxes
+	// (store.MailboxList), the total and the applied (clamped) request.
+	PageMailboxes(ctx context.Context, tenantID string, req listquery.Request) ([]store.Mailbox, int, listquery.Request, error)
 	UpdateMailbox(ctx context.Context, m store.Mailbox) error
 	// DeleteMailbox removes the mailbox; while tickets reference it the delete
 	// is refused with ErrNotEmpty unless force (which detaches them).

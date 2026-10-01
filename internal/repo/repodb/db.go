@@ -19,6 +19,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
@@ -192,8 +194,8 @@ func (d *DB) FindTicketByExternalID(ctx context.Context, tenantID, externalID st
 }
 
 // ListTickets implements repo.Tickets.
-func (d *DB) ListTickets(ctx context.Context, tenantID string, f store.TicketFilter) (items []store.Ticket, total int64, err error) {
-	f = f.Normalized(100)
+func (d *DB) ListTickets(ctx context.Context, tenantID string, f store.TicketFilter, req listquery.Request) (items []store.Ticket, total int, applied listquery.Request, err error) {
+	applied = req
 	var where []string
 	var args []any
 	add := func(cond string, v any) {
@@ -215,7 +217,7 @@ func (d *DB) ListTickets(ctx context.Context, tenantID string, f store.TicketFil
 	}
 	if f.TagID != "" {
 		if !isUUID(f.TagID) {
-			return []store.Ticket{}, 0, nil
+			return []store.Ticket{}, 0, req.Clamp(0), nil
 		}
 		add("EXISTS (SELECT 1 FROM ticket_tag_links l WHERE l.ticket_id = ticket_tickets.id AND l.tag_id = $%d::uuid)", f.TagID)
 	}
@@ -229,26 +231,24 @@ func (d *DB) ListTickets(ctx context.Context, tenantID string, f store.TicketFil
 		cond = " WHERE " + strings.Join(where, " AND ")
 	}
 	err = d.tenant(ctx, tenantID, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM ticket_tickets`+cond, args...).Scan(&total); err != nil {
-			return err
-		}
-		q := fmt.Sprintf(`SELECT %s FROM ticket_tickets%s ORDER BY created_at DESC, id DESC LIMIT %d OFFSET %d`, ticketCols, cond, f.PageSize, f.Offset())
-		rows, err := tx.Query(ctx, q, args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		items = []store.Ticket{}
-		for rows.Next() {
-			t, err := scanTicket(rows)
-			if err != nil {
-				return err
-			}
-			items = append(items, t)
-		}
-		return rows.Err()
+		items, total, applied, err = pageRows(ctx, tx, scanTicket, ticketCols, "ticket_tickets"+cond, store.TicketList, req, args...)
+		return err
 	})
-	return items, total, mapErr(err)
+	return items, total, applied, mapErr(err)
+}
+
+// pageRows counts the rows of from (a table plus optional WHERE using args),
+// clamps req to the last page and reads that page ordered by spec.
+func pageRows[T any](ctx context.Context, tx pgx.Tx, scan func(scanner) (T, error), cols, from string, spec listquery.Spec, req listquery.Request, args ...any) ([]T, int, listquery.Request, error) {
+	var total int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM `+from, args...).Scan(&total); err != nil {
+		return nil, 0, req, err
+	}
+	req = req.Clamp(total)
+	n := len(args)
+	q := fmt.Sprintf(`SELECT %s FROM %s ORDER BY %s LIMIT $%d OFFSET $%d`, cols, from, req.OrderBy(spec), n+1, n+2)
+	out, err := listRows(ctx, tx, scan, q, append(args, req.Limit(), req.Offset())...)
+	return out, total, req, err
 }
 
 func (d *DB) updateTicket(ctx context.Context, tenantID, id, set string, args ...any) (out store.Ticket, err error) {
@@ -532,6 +532,15 @@ func (d *DB) ListTags(ctx context.Context, tenantID, kind string) (out []store.T
 	return out, err
 }
 
+// PageTags implements repo.Tags.
+func (d *DB) PageTags(ctx context.Context, tenantID, kind string, req listquery.Request) (out []store.Tag, total int, applied listquery.Request, err error) {
+	err = d.tenant(ctx, tenantID, func(tx pgx.Tx) error {
+		out, total, applied, err = pageRows(ctx, tx, scanTag, tagCols, "ticket_tags WHERE ($1 = '' OR kind = $1)", store.TagList, req, kind)
+		return mapErr(err)
+	})
+	return out, total, applied, err
+}
+
 // UpdateTag implements repo.Tags (the kind is never written).
 func (d *DB) UpdateTag(ctx context.Context, t store.Tag) error {
 	return d.tenant(ctx, t.TenantID, func(tx pgx.Tx) error {
@@ -743,6 +752,15 @@ func (d *DB) ListRules(ctx context.Context, tenantID string) ([]store.Rule, erro
 	return d.listRules(ctx, tenantID, "")
 }
 
+// PageRules implements repo.Rules.
+func (d *DB) PageRules(ctx context.Context, tenantID string, req listquery.Request) (out []store.Rule, total int, applied listquery.Request, err error) {
+	err = d.tenant(ctx, tenantID, func(tx pgx.Tx) error {
+		out, total, applied, err = pageRows(ctx, tx, scanRule, ruleCols, "ticket_rules", store.RuleList, req)
+		return mapErr(err)
+	})
+	return out, total, applied, err
+}
+
 // ListEnabledRules implements repo.Rules.
 func (d *DB) ListEnabledRules(ctx context.Context, tenantID string) ([]store.Rule, error) {
 	return d.listRules(ctx, tenantID, " WHERE enabled")
@@ -813,6 +831,15 @@ func (d *DB) ListMailboxes(ctx context.Context, tenantID string) (out []store.Ma
 		return mapErr(err)
 	})
 	return out, err
+}
+
+// PageMailboxes implements repo.Mailboxes.
+func (d *DB) PageMailboxes(ctx context.Context, tenantID string, req listquery.Request) (out []store.Mailbox, total int, applied listquery.Request, err error) {
+	err = d.tenant(ctx, tenantID, func(tx pgx.Tx) error {
+		out, total, applied, err = pageRows(ctx, tx, scanMailbox, mailboxCols, "ticket_mailboxes", store.MailboxList, req)
+		return mapErr(err)
+	})
+	return out, total, applied, err
 }
 
 // UpdateMailbox implements repo.Mailboxes.

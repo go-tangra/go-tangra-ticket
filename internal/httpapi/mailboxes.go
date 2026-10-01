@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/mailboxes"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 // mailboxError maps the mailboxes service's errors to the contract reasons.
@@ -27,12 +28,16 @@ func (s *Server) registerMailboxes(svc *mailboxes.Service) {
 	fail := func(w http.ResponseWriter, r *http.Request, err error) { Fail(w, r, s.log, mailboxError(err)) }
 
 	s.withSubject("GET", Prefix+"/mailboxes", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {
-		items, err := svc.List(r.Context(), subj)
+		req, ok := parseList(w, r, store.MailboxList)
+		if !ok {
+			return
+		}
+		items, total, req, err := svc.List(r.Context(), subj, req)
 		if err != nil {
 			fail(w, r, err)
 			return
 		}
-		WriteJSON(w, http.StatusOK, map[string]any{"items": items})
+		writePage(w, items, total, req)
 	})
 
 	s.withSubject("POST", Prefix+"/mailboxes", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {

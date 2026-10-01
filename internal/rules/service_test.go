@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
@@ -207,7 +209,8 @@ func TestServiceUpdateBumpsVersionAndEvicts(t *testing.T) {
 func TestServiceListAndLimit(t *testing.T) {
 	e := newSvcEnv(t)
 	ctx := context.Background()
-	if l, err := e.svc.List(ctx, admin(tenantA)); err != nil || l == nil || len(l) != 0 {
+	def, _ := listquery.New(0, 0, "", "", store.RuleList)
+	if l, _, _, err := e.svc.List(ctx, admin(tenantA), def); err != nil || l == nil || len(l) != 0 {
 		t.Fatalf("empty list = %#v %v", l, err)
 	}
 	for _, sort := range []int{30, 10, 20} {
@@ -217,19 +220,23 @@ func TestServiceListAndLimit(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	l, _ := e.svc.List(ctx, admin(tenantA))
-	if len(l) != 3 || l[0].SortOrder != 10 || l[2].SortOrder != 30 {
+	l, total, _, _ := e.svc.List(ctx, admin(tenantA), def)
+	if len(l) != 3 || total != 3 || l[0].SortOrder != 10 || l[2].SortOrder != 30 {
 		t.Fatalf("order = %+v", l)
+	}
+	byName, _ := listquery.New(1, 2, "name", listquery.Desc, store.RuleList)
+	if l, total, applied, _ := e.svc.List(ctx, admin(tenantA), byName); len(l) != 2 || total != 3 || applied.Sort != "name" {
+		t.Fatalf("page by name = %+v %d %+v", l, total, applied)
 	}
 	var ie *InvalidError
 	if _, err := e.svc.Create(ctx, admin(tenantA), validInput()); !errors.As(err, &ie) {
 		t.Fatalf("limit = %v", err)
 	}
-	if l, _ := e.svc.List(ctx, admin(tenantB)); len(l) != 0 {
+	if l, _, _, _ := e.svc.List(ctx, admin(tenantB), def); len(l) != 0 {
 		t.Fatal("tenant leak")
 	}
-	e.st.FailNext("ListRules")
-	if _, err := e.svc.List(ctx, admin(tenantA)); err == nil {
+	e.st.FailNext("PageRules")
+	if _, _, _, err := e.svc.List(ctx, admin(tenantA), def); err == nil {
 		t.Fatal("store failure hidden")
 	}
 }
@@ -259,7 +266,7 @@ func TestServiceDryRun(t *testing.T) {
 	if _, err := e.svc.Test(ctx, authz.Subjects{}, in, Sample{}); !errors.Is(err, authz.ErrForbidden) {
 		t.Fatalf("no tenant = %v", err)
 	}
-	if l, _ := e.svc.List(ctx, admin(tenantA)); len(l) != 0 {
+	if l, _, _, _ := e.svc.List(ctx, admin(tenantA), listquery.Request{Page: 1, PageSize: 25, Sort: "sort_order", Order: listquery.Asc}); len(l) != 0 {
 		t.Fatal("dry run stored a rule")
 	}
 	s := Sample{From: "a@B.Example", Body: strings.Repeat("x", MaxBodyEval+10)}.Email()

@@ -259,7 +259,7 @@ func TestRepoDB(t *testing.T) {
 		if _, err := db.GetTicket(ctx, repotest.TenantA, "not-a-uuid"); !errors.Is(err, repo.ErrNotFound) {
 			t.Fatalf("get: %v", err)
 		}
-		items, total, err := db.ListTickets(ctx, repotest.TenantA, store.TicketFilter{TagID: "nope"})
+		items, total, _, err := db.ListTickets(ctx, repotest.TenantA, store.TicketFilter{TagID: "nope"}, repotest.Req(t, store.TicketList, 0, 0, "", ""))
 		if err != nil || total != 0 || len(items) != 0 {
 			t.Fatalf("list bad tag: %v", err)
 		}
