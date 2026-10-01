@@ -10,7 +10,7 @@ require (
 	github.com/go-tangra/go-tangra-lcm/sdk/v4 v4.1.0
 	github.com/go-tangra/go-tangra-portal/sdk/v4 v4.0.0
 	github.com/go-tangra/go-tangra-warden/sdk/v4 v4.0.0
-	github.com/go-tangra/go-tangra/v4 v4.3.0
+	github.com/go-tangra/go-tangra/v4 v4.3.1
 	github.com/google/cel-go v0.31.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/microcosm-cc/bluemonday v1.0.27

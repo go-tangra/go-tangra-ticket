@@ -14,7 +14,7 @@ func TestListSpecsValid(t *testing.T) {
 		}
 	}
 	r, err := listquery.New(0, 0, "", "", TicketList)
-	if err != nil || r.OrderBy(TicketList) != "created_at DESC NULLS LAST, id DESC" || r.PageSize != 25 {
+	if err != nil || r.OrderBy(TicketList) != "created_at DESC, id DESC" || r.PageSize != 25 {
 		t.Fatalf("ticket default = %+v %v %q", r, err, r.OrderBy(TicketList))
 	}
 	if _, err := listquery.New(1, 200, "", "", TicketList); err != nil {

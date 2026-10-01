@@ -202,6 +202,9 @@ func (d *DB) ListTickets(ctx context.Context, tenantID string, f store.TicketFil
 		args = append(args, v)
 		where = append(where, fmt.Sprintf(cond, len(args)))
 	}
+	// The tenant predicate is explicit (not only RLS) so isolation never
+	// depends on the session GUC alone and the planner sees the index prefix.
+	add("tenant_id = $%d::uuid", tenantID)
 	if f.Status != "" {
 		add("status = $%d", f.Status)
 	}
