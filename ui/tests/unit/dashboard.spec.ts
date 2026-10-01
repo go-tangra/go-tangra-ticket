@@ -321,6 +321,10 @@ describe('ticket list live refresh', () => {
     vi.useRealTimers()
     await flushPromises()
     expect(lists()).toBe(before + 1)
+    // The reload repeats the current page, size and sort.
+    const listCalls = calls.filter((c) => c.url.startsWith('/api/ticket/v1/tickets'))
+    expect(listCalls.at(-1)!.url).toBe(listCalls.at(-2)!.url)
+    expect(listCalls.at(-1)!.url).toContain('page=1&page_size=25&sort=created_at&order=desc')
     w.unmount()
     expect(src.closed).toBe(true)
   })

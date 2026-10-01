@@ -1,39 +1,50 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api, describe } from '@/api/client'
+import type { ListParams } from '@go-tangra/ui'
 import type { AssignableUser, Comment, HistoryEntry, MessageBody, Tag, Ticket, TicketCreate, TicketFilter, TicketPage, TicketUpdate } from '@/api/types'
 
-export const PAGE_SIZE = 25
+/** Columns the ticket list sorts on server-side (api/openapi/ticket.yaml). */
+export const TICKET_SORTS = ['subject', 'status', 'priority', 'assignee', 'created_at', 'updated_at'] as const
 
 export const useTickets = defineStore('ticket-tickets', () => {
   const items = ref<Ticket[]>([])
   const total = ref(0)
-  const page = ref(1)
-  const pageSize = ref(PAGE_SIZE)
   const filter = ref<TicketFilter>({})
+  const params = ref<Partial<ListParams>>({})
   const loading = ref(false)
   const error = ref('')
   const users = ref<AssignableUser[]>([])
   const tags = ref<Tag[]>([])
+  let seq = 0
 
-  /** Loads one page (newest first). A new filter restarts at page 1. */
-  async function list(f: TicketFilter = filter.value, p = 1): Promise<void> {
+  /**
+   * Loads one page for the filter and the page/size/sort parameters (server
+   * defaults when omitted). Resolves with the page the server answered (it
+   * clamps pages beyond the end), or null when a newer request superseded it.
+   */
+  async function list(f: TicketFilter = filter.value, p: Partial<ListParams> = params.value): Promise<number | null> {
+    const mine = ++seq
     loading.value = true
     error.value = ''
     filter.value = { ...f }
+    params.value = { ...p }
     try {
-      const res = await api<TicketPage>('GET', 'tickets', undefined, { query: { ...f, page: p, page_size: pageSize.value } })
+      const res = await api<TicketPage>('GET', 'tickets', undefined, { query: { ...f, ...p } })
+      if (mine !== seq) return null
       items.value = res.items ?? []
       total.value = res.total ?? 0
-      page.value = p
+      return res.page ?? 1
     } catch (e) {
-      error.value = describe(e)
+      if (mine === seq) error.value = describe(e)
+      return null
     } finally {
-      loading.value = false
+      if (mine === seq) loading.value = false
     }
   }
 
-  const reload = () => list(filter.value, page.value)
+  /** Reloads the current page (same filter, page, size and sort). */
+  const reload = () => list(filter.value, params.value)
 
   async function get(id: string): Promise<Ticket> {
     return api<Ticket>('GET', 'tickets/' + id)
@@ -87,10 +98,10 @@ export const useTickets = defineStore('ticket-tickets', () => {
     return users.value
   }
 
-  /** Tags for the filter bar; an unavailable tag service leaves the list empty. */
+  /** Tags for the filter bar (the first 200 by name); an unavailable tag service leaves the list empty. */
   async function loadTags(): Promise<Tag[]> {
     try {
-      const res = await api<{ items: Tag[] }>('GET', 'tags')
+      const res = await api<{ items: Tag[] }>('GET', 'tags', undefined, { query: { page_size: 200 } })
       tags.value = res.items ?? []
     } catch {
       tags.value = []
@@ -128,5 +139,5 @@ export const useTickets = defineStore('ticket-tickets', () => {
     return api<MessageBody>('GET', 'tickets/' + id + '/body')
   }
 
-  return { comments, addNote, reply, removeComment, body, items, total, page, pageSize, filter, loading, error, users, tags, list, reload, get, create, update, remove, assign, setStatus, history, assignableUsers, loadTags, setTags }
+  return { comments, addNote, reply, removeComment, body, items, total, params, filter, loading, error, users, tags, list, reload, get, create, update, remove, assign, setStatus, history, assignableUsers, loadTags, setTags }
 })

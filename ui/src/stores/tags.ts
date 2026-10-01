@@ -1,38 +1,24 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { api, describe } from '@/api/client'
-import type { Tag, TagInput, TagKind } from '@/api/types'
+import { api } from '@/api/client'
+import type { Tag, TagInput } from '@/api/types'
+import { pagedList } from './paged'
 
-const byKindName = (a: Tag, b: Tag) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+/** Server-side sort fields of the tag list. */
+export const TAG_SORTS = ['name'] as const
 
 export const useTags = defineStore('ticket-tags', () => {
-  const items = ref<Tag[]>([])
-  const loading = ref(false)
-  const error = ref('')
-
-  /** Loads the vocabulary (optionally one kind). */
-  async function list(kind?: TagKind | ''): Promise<void> {
-    loading.value = true
-    error.value = ''
-    try {
-      const res = await api<{ items: Tag[] }>('GET', 'tags', undefined, kind ? { query: { kind } } : {})
-      items.value = res.items ?? []
-    } catch (e) {
-      error.value = describe(e)
-    } finally {
-      loading.value = false
-    }
-  }
+  const page = pagedList<Tag>('tags')
+  const { items, total, reload } = page
 
   async function create(body: TagInput): Promise<Tag> {
     const t = await api<Tag>('POST', 'tags', body)
-    items.value = [...items.value, t].sort(byKindName)
+    void reload()
     return t
   }
 
   async function update(id: string, body: TagInput): Promise<Tag> {
     const t = await api<Tag>('PUT', 'tags/' + id, body)
-    items.value = items.value.map((x) => (x.id === id ? t : x)).sort(byKindName)
+    items.value = items.value.map((x) => (x.id === id ? t : x))
     return t
   }
 
@@ -40,7 +26,9 @@ export const useTags = defineStore('ticket-tags', () => {
   async function remove(id: string): Promise<void> {
     await api('DELETE', 'tags/' + id)
     items.value = items.value.filter((x) => x.id !== id)
+    total.value = Math.max(0, total.value - 1)
+    void reload()
   }
 
-  return { items, loading, error, list, create, update, remove }
+  return { ...page, create, update, remove }
 })

@@ -28,7 +28,11 @@ const mb: Mailbox = { id: 'm1', address: 'support@acme.test', display_name: 'Acm
 
 function api(state: { items: Mailbox[]; refs: boolean }) {
   return (url: string, method: string, body: unknown): { status?: number; body?: unknown } => {
-    if (url === '/api/ticket/v1/mailboxes' && method === 'GET') return { body: { items: state.items } }
+    const path = url.split('?')[0]
+    if (path === '/api/ticket/v1/mailboxes' && method === 'GET') {
+      const q = new URL(url, 'https://x').searchParams
+      return { body: { items: state.items, total: state.items.length, page: 1, page_size: 25, sort: q.get('sort') ?? 'address', order: q.get('order') ?? 'asc' } }
+    }
     if (url === '/api/ticket/v1/mailboxes' && method === 'POST') {
       const m = { ...mb, id: 'm2', ...(body as object) } as Mailbox
       state.items = [...state.items, m]
@@ -37,6 +41,7 @@ function api(state: { items: Mailbox[]; refs: boolean }) {
     if (url.startsWith('/api/ticket/v1/mailboxes/m1') && method === 'PUT') return { body: { ...mb, ...(body as object) } }
     if (url.startsWith('/api/ticket/v1/mailboxes/m1') && method === 'DELETE') {
       if (state.refs && !url.includes('force=true')) return { status: 409, body: { reason: 'conflict' } }
+      state.items = state.items.filter((m) => m.id !== 'm1')
       return { status: 204 }
     }
     return { status: 404, body: { reason: 'not_found' } }
@@ -69,20 +74,32 @@ describe('mailboxes', () => {
     const s = useMailboxes()
     await s.list()
     expect(s.items.map((m) => m.address)).toEqual(['support@acme.test'])
+    expect(s.total).toBe(1)
     await s.create({ address: 'help@acme.test' })
+    await flushPromises()
     expect(s.items.length).toBe(2)
+    expect(s.total).toBe(2)
     await s.update('m1', { active: false })
     expect(calls.at(-1)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/mailboxes/m1', body: { active: false } })
     await expect(s.remove('m1')).rejects.toThrow()
     await s.remove('m1', true)
-    expect(calls.at(-1)!.url).toBe('/api/ticket/v1/mailboxes/m1?force=true')
+    expect(calls.filter((c) => c.method !== 'GET').at(-1)!.url).toBe('/api/ticket/v1/mailboxes/m1?force=true')
     expect(s.items.map((m) => m.id)).toEqual(['m2'])
+    await flushPromises()
+    expect(s.total).toBe(1)
   })
 
   it('view: rows, create through a drawer, delete with conflict offers detaching', async () => {
     const calls = fetchMock(api({ items: [mb], refs: true }))
     const w = mount(Mailboxes, { global: withAbility(MANAGER), attachTo: document.body })
     await flushPromises()
+    expect(Object.fromEntries(new URL(calls[0]!.url, 'https://x').searchParams)).toEqual({ page: '1', page_size: '25', sort: 'address', order: 'asc' })
+    // Only the server's sort fields are sortable headers; a header click sorts server-side.
+    const sortButtons = w.findAll('th button').map((b) => b.text())
+    expect(sortButtons).toEqual(['Address', 'Display name'])
+    await w.findAll('th button')[1]!.trigger('click')
+    await flushPromises()
+    expect(calls.at(-1)!.url).toContain('sort=name&order=asc')
     const row = w.find('[data-test="mailbox-row-m1"]')
     expect(row.text()).toContain('support@acme.test')
     expect(row.text()).toContain('Active')
@@ -107,7 +124,7 @@ describe('mailboxes', () => {
     expect(calls.at(-1)!.url).toBe('/api/ticket/v1/mailboxes/m1')
     confirm.answer(true)
     await flushPromises()
-    expect(calls.at(-1)).toMatchObject({ url: '/api/ticket/v1/mailboxes/m1?force=true', method: 'DELETE' })
+    expect(calls.filter((c) => c.method !== 'GET').at(-1)).toMatchObject({ url: '/api/ticket/v1/mailboxes/m1?force=true', method: 'DELETE' })
     expect(w.find('[data-test="mailbox-row-m1"]').exists()).toBe(false)
     w.unmount()
   })

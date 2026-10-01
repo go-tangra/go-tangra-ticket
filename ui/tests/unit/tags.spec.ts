@@ -65,8 +65,12 @@ function api(state: { items: Tag[] }) {
   return (url: string, method: string, body: unknown): { status?: number; body?: unknown } => {
     const path = url.replace(/^\/api\/ticket\/v1\//, '')
     if (path.startsWith('tags') && method === 'GET') {
-      const kind = new URL(url, 'https://x').searchParams.get('kind')
-      return { body: { items: state.items.filter((t) => !kind || t.kind === kind) } }
+      const q = new URL(url, 'https://x').searchParams
+      const kind = q.get('kind')
+      // The server orders by name (case-insensitive) and pages; the mock mirrors the default.
+      const items = state.items.filter((t) => !kind || t.kind === kind).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+      if (q.get('order') === 'desc') items.reverse()
+      return { body: { items, total: items.length, page: 1, page_size: 25, sort: 'name', order: q.get('order') ?? 'asc' } }
     }
     if (path === 'tags' && method === 'POST') {
       if (state.items.some((t) => t.name.toLowerCase() === String((body as Tag).name).toLowerCase())) return { status: 409, body: { reason: 'conflict' } }
@@ -75,7 +79,10 @@ function api(state: { items: Tag[] }) {
       return { status: 201, body: t }
     }
     if (path.startsWith('tags/') && method === 'PUT') return { body: { ...state.items.find((t) => path.endsWith(t.id)), ...(body as object) } }
-    if (path.startsWith('tags/') && method === 'DELETE') return { status: 204 }
+    if (path.startsWith('tags/') && method === 'DELETE') {
+      state.items = state.items.filter((t) => !path.endsWith(t.id))
+      return { status: 204 }
+    }
     return { status: 404, body: { reason: 'not_found' } }
   }
 }
@@ -93,16 +100,22 @@ describe('tags', () => {
   it('store: list by kind, create keeps order, update, delete', async () => {
     const calls = fetchMock(api({ items: [billing, hardware] }))
     const s = useTags()
-    await s.list('category')
+    await s.list({ kind: 'category' })
     expect(calls.at(-1)!.url).toBe('/api/ticket/v1/tags?kind=category')
     expect(s.items.map((t) => t.id)).toEqual(['g2'])
-    await s.list()
+    await s.list({ page: 1, page_size: 25, sort: 'name', order: 'asc' })
+    expect(calls.at(-1)!.url).toBe('/api/ticket/v1/tags?page=1&page_size=25&sort=name&order=asc')
     await s.create({ name: 'Alpha' })
-    expect(s.items.map((t) => t.name)).toEqual(['Hardware', 'Alpha', 'Billing'])
+    await flushPromises()
+    expect(calls.at(-1)!.url).toBe('/api/ticket/v1/tags?page=1&page_size=25&sort=name&order=asc')
+    expect(s.items.map((t) => t.name)).toEqual(['Alpha', 'Billing', 'Hardware'])
+    expect(s.total).toBe(3)
     await s.update('g1', { name: 'Invoices' })
     expect(calls.at(-1)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/tags/g1', body: { name: 'Invoices' } })
     await s.remove('g1')
     expect(s.items.some((t) => t.id === 'g1')).toBe(false)
+    await flushPromises()
+    expect(s.total).toBe(2)
     await expect(s.create({ name: 'hardware' })).rejects.toThrow()
   })
 
@@ -116,10 +129,14 @@ describe('tags', () => {
     expect(w.find('[style]').exists()).toBe(false)
 
     const filter = w.find<HTMLSelectElement>('select[data-field="tag-kind-filter"]')
+    expect(w.findAll('th button').map((b) => b.text())).toEqual(['Name'])
+    await w.find('th button').trigger('click') // name descending
+    await flushPromises()
+    expect(calls.at(-1)!.url).toBe('/api/ticket/v1/tags?page=1&page_size=25&sort=name&order=desc')
     filter.element.value = 'category'
     await filter.trigger('change')
     await flushPromises()
-    expect(calls.at(-1)!.url).toBe('/api/ticket/v1/tags?kind=category')
+    expect(calls.at(-1)!.url).toBe('/api/ticket/v1/tags?page=1&page_size=25&sort=name&order=desc&kind=category')
 
     await w.find('[data-test="tag-new"]').trigger('click')
     await flushPromises()
@@ -142,7 +159,7 @@ describe('tags', () => {
     await flushPromises()
     confirm.answer(true)
     await flushPromises()
-    expect(calls.at(-1)).toMatchObject({ url: '/api/ticket/v1/tags/g2', method: 'DELETE' })
+    expect(calls.filter((c) => c.method !== 'GET').at(-1)).toMatchObject({ url: '/api/ticket/v1/tags/g2', method: 'DELETE' })
     w.unmount()
   })
 

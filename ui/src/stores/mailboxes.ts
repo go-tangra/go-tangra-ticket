@@ -1,29 +1,18 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { api, describe } from '@/api/client'
+import { api } from '@/api/client'
 import type { Mailbox, MailboxInput } from '@/api/types'
+import { pagedList } from './paged'
+
+/** Server-side sort fields of the mailbox list (name = display name). */
+export const MAILBOX_SORTS = ['address', 'name'] as const
 
 export const useMailboxes = defineStore('ticket-mailboxes', () => {
-  const items = ref<Mailbox[]>([])
-  const loading = ref(false)
-  const error = ref('')
-
-  async function list(): Promise<void> {
-    loading.value = true
-    error.value = ''
-    try {
-      const res = await api<{ items: Mailbox[] }>('GET', 'mailboxes')
-      items.value = res.items ?? []
-    } catch (e) {
-      error.value = describe(e)
-    } finally {
-      loading.value = false
-    }
-  }
+  const page = pagedList<Mailbox>('mailboxes')
+  const { items, total, reload } = page
 
   async function create(body: MailboxInput): Promise<Mailbox> {
     const m = await api<Mailbox>('POST', 'mailboxes', body)
-    items.value = [...items.value, m].sort((a, b) => a.address.localeCompare(b.address))
+    void reload()
     return m
   }
 
@@ -37,7 +26,9 @@ export const useMailboxes = defineStore('ticket-mailboxes', () => {
   async function remove(id: string, force = false): Promise<void> {
     await api('DELETE', 'mailboxes/' + id, undefined, force ? { query: { force: 'true' } } : {})
     items.value = items.value.filter((x) => x.id !== id)
+    total.value = Math.max(0, total.value - 1)
+    void reload()
   }
 
-  return { items, loading, error, list, create, update, remove }
+  return { ...page, create, update, remove }
 })

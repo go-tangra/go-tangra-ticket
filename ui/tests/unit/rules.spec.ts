@@ -96,11 +96,17 @@ describe('rule vocabulary and schema', () => {
   })
 })
 
+const lastWrite = (calls: { method: string }[]) => calls.filter((c) => c.method !== 'GET').at(-1)
+
 function api(state: { items: Rule[] }) {
   return (url: string, method: string, body: unknown): { status?: number; body?: unknown } => {
     const path = url.replace(/^\/api\/ticket\/v1\//, '').split('?')[0]!
     if (path === 'assignable-users') return { body: { items: [{ id: 'u1', name: 'Ada' }] } }
-    if (path === 'rules' && method === 'GET') return { body: { items: state.items } }
+    if (path === 'rules' && method === 'GET') {
+      // The server pages and orders (sort_order, then id) — the mock mirrors the default.
+      const items = [...state.items].sort((a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id))
+      return { body: { items, total: items.length, page: 1, page_size: 25, sort: 'sort_order', order: 'asc' } }
+    }
     if (path === 'rules/test') {
       const { rule, sample } = body as { rule: { actions: unknown[]; expression: string }; sample: { subject?: string } }
       if (rule.expression === 'nope(') return { status: 422, body: { reason: 'invalid_rule', detail: { field: 'expression', message: 'Syntax error: mismatched input' } } }
@@ -118,7 +124,10 @@ function api(state: { items: Rule[] }) {
       const cur = state.items.find((r) => path.endsWith(r.id))!
       return { body: { ...cur, ...(body as object), version: cur.version + 1 } }
     }
-    if (path.startsWith('rules/') && method === 'DELETE') return { status: 204 }
+    if (path.startsWith('rules/') && method === 'DELETE') {
+      state.items = state.items.filter((r) => !path.endsWith(r.id))
+      return { status: 204 }
+    }
     return { status: 404, body: { reason: 'not_found' } }
   }
 }
@@ -145,11 +154,14 @@ describe('rules', () => {
     const calls = fetchMock(api({ items: [spam, invoices] }))
     const s = useRules()
     await s.list()
+    expect(Object.fromEntries(new URL(calls[0]!.url, 'https://x').searchParams)).toEqual({})
     await s.create({ name: 'Early', sort_order: 0, expression: 'true', actions: [{ type: 'drop' }] })
+    await flushPromises()
     expect(s.items.map((r) => r.name)).toEqual(['Early', 'Spam', 'Invoices'])
+    expect(s.total).toBe(3)
     const up = await s.setEnabled(spam, true)
     expect(up.enabled).toBe(true)
-    expect(calls.at(-1)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/rules/r2', body: { name: 'Spam', enabled: true, expression: 'spamScore > 5.0', actions: [{ type: 'drop' }] } })
+    expect(lastWrite(calls)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/rules/r2', body: { name: 'Spam', enabled: true, expression: 'spamScore > 5.0', actions: [{ type: 'drop' }] } })
     await s.remove('r1')
     expect(s.items.some((r) => r.id === 'r1')).toBe(false)
     const res = await s.test({ name: 'x', actions: [{ type: 'drop' }] }, { subject: 'Invoice' })
@@ -160,6 +172,8 @@ describe('rules', () => {
     const calls = fetchMock(api({ items: [spam, invoices] }))
     const w = mount(Rules, { global: withAbility(ADMIN), attachTo: document.body })
     await flushPromises()
+    expect(Object.fromEntries(new URL(calls.find((c) => c.url.includes('/rules'))!.url, 'https://x').searchParams)).toEqual({ page: '1', page_size: '25', sort: 'sort_order', order: 'asc' })
+    expect(w.findAll('th button').map((b) => b.text())).toEqual(['Order', 'Name'])
     const row = w.find('[data-test="rule-row-r1"]').text()
     expect(row).toContain('Invoices')
     expect(row).toContain('Category Billing')
@@ -171,14 +185,14 @@ describe('rules', () => {
     toggle.element.checked = true
     await toggle.trigger('change')
     await flushPromises()
-    expect(calls.at(-1)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/rules/r2', body: { enabled: true } })
+    expect(lastWrite(calls)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/rules/r2', body: { enabled: true } })
 
     const confirm = useConfirm()
     await w.find('[data-test="rule-delete-r1"]').trigger('click')
     await flushPromises()
     confirm.answer(true)
     await flushPromises()
-    expect(calls.at(-1)).toMatchObject({ method: 'DELETE', url: '/api/ticket/v1/rules/r1' })
+    expect(lastWrite(calls)).toMatchObject({ method: 'DELETE', url: '/api/ticket/v1/rules/r1' })
     w.unmount()
 
     fetchMock(api({ items: [invoices] }))
@@ -286,7 +300,7 @@ describe('rules', () => {
     await flushPromises()
     click('rule-save')
     await flushPromises()
-    expect(calls.at(-1)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/rules/r1', body: { conditions: [{ field: 'subject' }], actions: [{ type: 'tag' }] } })
+    expect(lastWrite(calls)).toMatchObject({ method: 'PUT', url: '/api/ticket/v1/rules/r1', body: { conditions: [{ field: 'subject' }], actions: [{ type: 'tag' }] } })
     w.unmount()
   })
 })

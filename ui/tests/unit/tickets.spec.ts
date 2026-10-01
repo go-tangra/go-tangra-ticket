@@ -44,7 +44,10 @@ function standardApi(state: { ticket: Ticket; total?: number; created?: Ticket }
     if (state.created && path === 'tickets/' + state.created.id) return { body: state.created }
     if (path === 'assignable-users') return { body: users }
     if (path === 'tags') return { body: { items: tagList } }
-    if (path === 'tickets' && method === 'GET') return { body: { items: [state.ticket], total: state.total ?? 1 } }
+    if (path === 'tickets' && method === 'GET') {
+      const q = new URL(url, 'https://x').searchParams
+      return { body: { items: [state.ticket], total: state.total ?? 1, page: Number(q.get('page') ?? 1), page_size: 25, sort: q.get('sort') ?? 'created_at', order: q.get('order') ?? 'desc' } }
+    }
     if (path === 'tickets' && method === 'POST') {
       state.created = { ...base, id: 't9', tags: [], ...(reqBody as object) }
       return { status: 201, body: state.created }
@@ -99,12 +102,14 @@ describe('tickets store', () => {
     const state = { ticket: { ...base }, total: 60 }
     const calls = fetchMock(standardApi(state))
     const s = useTickets()
-    await s.list({ status: 'open', assignee_id: 'none', query: undefined }, 2)
+    const page = await s.list({ status: 'open', assignee_id: 'none', query: undefined }, { page: 2, page_size: 25, sort: 'priority', order: 'desc' })
     const url = new URL(calls[0]!.url, 'https://x')
     expect(url.pathname).toBe('/api/ticket/v1/tickets')
-    expect(Object.fromEntries(url.searchParams)).toEqual({ status: 'open', assignee_id: 'none', page: '2', page_size: '25' })
+    expect(Object.fromEntries(url.searchParams)).toEqual({ status: 'open', assignee_id: 'none', page: '2', page_size: '25', sort: 'priority', order: 'desc' })
     expect(s.total).toBe(60)
-    expect(s.page).toBe(2)
+    expect(page).toBe(2)
+    await s.reload()
+    expect(calls.at(-1)!.url).toBe(calls[0]!.url)
     await s.assign('t1', '')
     expect(calls.at(-1)).toMatchObject({ method: 'POST', body: { assignee_id: null } })
     await s.assign('t1', 'u1')
@@ -115,6 +120,7 @@ describe('tickets store', () => {
     expect((await s.history('t1')).length).toBe(2)
     expect((await s.assignableUsers()).map((u) => u.id)).toEqual(['u1', 'u2'])
     expect((await s.loadTags()).map((t) => t.id)).toEqual(['g1', 'g2'])
+    expect(calls.at(-1)!.url).toBe('/api/ticket/v1/tags?page_size=200')
     await s.create({ subject: 'New' })
     expect(s.total).toBe(61)
     await s.remove('t9')
@@ -145,6 +151,10 @@ describe('ticket views', () => {
     const calls = fetchMock(standardApi({ ticket: { ...base }, total: 60 }))
     const w = mount(Tickets, { global: withAbility(AGENT), attachTo: document.body })
     await flushPromises()
+    const lists = () => calls.filter((c) => c.url.startsWith('/api/ticket/v1/tickets?'))
+    expect(Object.fromEntries(new URL(lists()[0]!.url, 'https://x').searchParams)).toEqual({ page: '1', page_size: '25', sort: 'created_at', order: 'desc' })
+    // Exactly the server's sort fields are sortable headers.
+    expect(w.findAll('th button').map((b) => b.text())).toEqual(['Subject', 'Status', 'Priority', 'Assignee', 'Created', 'Updated'])
     const row = w.find('[data-test="ticket-row-t1"]')
     expect(row.exists()).toBe(true)
     expect(row.text()).toContain('Printer on fire')
@@ -163,11 +173,44 @@ describe('ticket views', () => {
     await flushPromises()
     expect(calls.at(-1)!.url).toMatch(/status=pending.*assignee_id=none|assignee_id=none.*status=pending/)
 
-    expect(w.find('[data-test="ticket-pager"]').text()).toContain('Page 1 of 3 · 60 tickets')
+    expect(w.text()).toContain('of 60')
     await w.find('button[aria-label="Next page"]').trigger('click')
     await flushPromises()
     expect(calls.at(-1)!.url).toContain('page=2')
     expect(calls.at(-1)!.url).toContain('status=pending')
+
+    // Sorting keeps the filters and starts at page 1; the priority column sorts urgent first.
+    await w.findAll('th button').find((b) => b.text() === 'Priority')!.trigger('click')
+    await flushPromises()
+    expect(calls.at(-1)!.url).toContain('status=pending')
+    expect(calls.at(-1)!.url).toContain('page=1&page_size=25&sort=priority&order=desc')
+
+    // A changed filter returns to page 1 and keeps the sort.
+    await w.find('button[aria-label="Next page"]').trigger('click')
+    await flushPromises()
+    expect(calls.at(-1)!.url).toContain('page=2')
+    await w.find<HTMLSelectElement>('select[data-field="priority"]').setValue('high')
+    await flushPromises()
+    expect(calls.at(-1)!.url).toContain('priority=high')
+    expect(calls.at(-1)!.url).toContain('page=1&page_size=25&sort=priority&order=desc')
+    w.unmount()
+  })
+
+  it('list: last page via the pager; the store reports the page the server clamped to', async () => {
+    const calls = fetchMock((url) => {
+      const path = url.replace(/^\/api\/ticket\/v1\//, '').split('?')[0]!
+      if (path !== 'tickets') return { body: { items: [] } }
+      // 30 tickets: the server clamps any later page to page 2.
+      const asked = Number(new URL(url, 'https://x').searchParams.get('page') ?? 1)
+      return { body: { items: [{ ...base }], total: 30, page: Math.min(asked, 2), page_size: 25, sort: 'created_at', order: 'desc' } }
+    })
+    const w = mount(Tickets, { global: withAbility(VIEWER), attachTo: document.body })
+    await flushPromises()
+    await w.find('button[aria-label="Last page"]').trigger('click')
+    await flushPromises()
+    expect(calls.at(-1)!.url).toContain('page=2')
+    const store = useTickets()
+    expect(await store.list({}, { page: 7 })).toBe(2)
     w.unmount()
   })
 
