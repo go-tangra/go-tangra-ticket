@@ -4,42 +4,45 @@ import "github.com/go-tangra/go-tangra/v4/listquery"
 
 // List definitions of the ticket tables (specs/032-server-side-tables in
 // go-tangra). Sort names map to constant SQL expressions only; the unique id
-// breaks ties so paging a static list returns every record once.
+// breaks ties so paging a static list returns every record once. NotNull marks
+// expressions that never yield NULL (NOT NULL columns; the rank CASEs cover
+// every value the columns' CHECK constraints allow): their ORDER BY carries no
+// NULLS LAST, so btree indexes serve both directions.
 var (
 	// TicketList pages the ticket queue (newest first by default). Status and
 	// priority sort by their workflow/urgency rank, not alphabetically; the
 	// assignee sorts by its denormalised name with unassigned tickets last.
 	TicketList = listquery.Spec{
 		Fields: map[string]listquery.Field{
-			"subject":    {Expr: "subject", Text: true, DefaultDir: listquery.Asc},
-			"status":     {Expr: StatusRankExpr, DefaultDir: listquery.Asc},
-			"priority":   {Expr: PriorityRankExpr, DefaultDir: listquery.Desc},
+			"subject":    {Expr: "subject", Text: true, NotNull: true, DefaultDir: listquery.Asc},
+			"status":     {Expr: StatusRankExpr, NotNull: true, DefaultDir: listquery.Asc},
+			"priority":   {Expr: PriorityRankExpr, NotNull: true, DefaultDir: listquery.Desc},
 			"assignee":   {Expr: "NULLIF(assignee_name, '')", Text: true, DefaultDir: listquery.Asc},
-			"created_at": {Expr: "created_at", DefaultDir: listquery.Desc},
-			"updated_at": {Expr: "updated_at", DefaultDir: listquery.Desc},
+			"created_at": {Expr: "created_at", NotNull: true, DefaultDir: listquery.Desc},
+			"updated_at": {Expr: "updated_at", NotNull: true, DefaultDir: listquery.Desc},
 		},
 		Default: "created_at", TieBreak: "id",
 	}
 	// MailboxList pages the support mailboxes (by address, as before).
 	MailboxList = listquery.Spec{
 		Fields: map[string]listquery.Field{
-			"address": {Expr: "address", Text: true, DefaultDir: listquery.Asc},
-			"name":    {Expr: "display_name", Text: true, DefaultDir: listquery.Asc},
+			"address": {Expr: "address", Text: true, NotNull: true, DefaultDir: listquery.Asc},
+			"name":    {Expr: "display_name", Text: true, NotNull: true, DefaultDir: listquery.Asc},
 		},
 		Default: "address", TieBreak: "id",
 	}
 	// RuleList pages the triage rules (evaluation order by default).
 	RuleList = listquery.Spec{
 		Fields: map[string]listquery.Field{
-			"sort_order": {Expr: "sort_order", DefaultDir: listquery.Asc},
-			"name":       {Expr: "name", Text: true, DefaultDir: listquery.Asc},
+			"sort_order": {Expr: "sort_order", NotNull: true, DefaultDir: listquery.Asc},
+			"name":       {Expr: "name", Text: true, NotNull: true, DefaultDir: listquery.Asc},
 		},
 		Default: "sort_order", TieBreak: "id",
 	}
 	// TagList pages the tag vocabulary.
 	TagList = listquery.Spec{
 		Fields: map[string]listquery.Field{
-			"name": {Expr: "name", Text: true, DefaultDir: listquery.Asc},
+			"name": {Expr: "name", Text: true, NotNull: true, DefaultDir: listquery.Asc},
 		},
 		Default: "name", TieBreak: "id",
 	}
