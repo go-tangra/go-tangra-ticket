@@ -3,11 +3,11 @@
 // reply identity and acknowledgement settings. Create/edit in a record drawer;
 // delete asks first and, while tickets still reference the mailbox, offers to
 // detach them.
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, useConfirm, useToast, type Column } from '@go-tangra/ui'
+import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, useConfirm, useListQuery, useToast, type Column } from '@go-tangra/ui'
 import { zodToFields } from '@go-tangra/ui/forms'
-import { useMailboxes } from '@/stores/mailboxes'
+import { MAILBOX_SORTS, useMailboxes } from '@/stores/mailboxes'
 import { AUTO_ACK_HINT, mailboxSchema } from '@/schemas'
 import type { Mailbox, MailboxInput } from '@/api/types'
 import { ApiError, describe } from '@/api/client'
@@ -19,7 +19,14 @@ const toast = useToast()
 const canManage = computed(() => ability.can('manage', 'TicketMailbox'))
 const error = ref('')
 
-onMounted(() => void store.list())
+// Server-paged and sorted (by address unless the display name is chosen).
+const lq = useListQuery('mailboxes', { sortable: [...MAILBOX_SORTS], defaultSort: { key: 'address', dir: 'asc' } })
+async function load(): Promise<void> {
+  const page = await store.list(lq.query.value)
+  if (page !== null) lq.clampTo(page)
+}
+watch(lq.query, () => void load())
+onMounted(() => void load())
 
 const fields = zodToFields(mailboxSchema, {
   address: { label: 'Address', cols: 12, required: true, placeholder: 'support@example.org' },
@@ -74,8 +81,8 @@ async function remove(m: Mailbox): Promise<void> {
 
 type Row = Mailbox & Record<string, unknown>
 const columns: Column<Row>[] = [
-  { key: 'address', label: 'Address' },
-  { key: 'display_name', label: 'Display name', hideOnStack: true },
+  { key: 'address', label: 'Address', sortable: true },
+  { key: 'name', label: 'Display name', hideOnStack: true, sortable: true, format: (m) => m.display_name },
   { key: 'active', label: 'Active', width: 'sm' },
   { key: 'auto_ack', label: 'Auto-ack', width: 'sm' },
 ]
@@ -86,12 +93,12 @@ const rows = computed(() => store.items as Row[])
   <UiPage title="Mailboxes">
     <template #actions>
       <UiButton v-if="canManage" icon="mdi-plus" data-test="mailbox-new" @click="newMailbox">New mailbox</UiButton>
-      <UiButton variant="text" icon="mdi-refresh" icon-only label="Refresh" @click="store.list()" />
+      <UiButton variant="text" icon="mdi-refresh" icon-only label="Refresh" @click="load()" />
     </template>
     <UiAlert v-if="error" kind="error" class="mb-3" data-test="mailbox-error">{{ error }}</UiAlert>
     <UiAlert v-if="store.error" kind="error" class="mb-3">{{ store.error }}</UiAlert>
     <UiCard :padded="false">
-      <UiDataTable :items="rows" :columns="columns" :loading="store.loading" caption="Support mailboxes" empty-title="No mailboxes" empty-text="Add the support address your mail relay forwards to this service." :row-attrs="(m) => ({ 'data-test': 'mailbox-row-' + m.id })" data-test="mailboxes-table">
+      <UiDataTable :items="rows" :columns="columns" :loading="store.loading" :total="store.total" :page="lq.page.value" :page-size="lq.pageSize.value" :sort="lq.sort.value" row-key="id" caption="Support mailboxes" empty-title="No mailboxes" empty-text="Add the support address your mail relay forwards to this service." :row-attrs="(m) => ({ 'data-test': 'mailbox-row-' + m.id })" data-test="mailboxes-table" @update:page="lq.setPage" @update:page-size="lq.setPageSize" @update:sort="lq.setSort">
         <template #cell-active="{ row }"><UiBadge :color="row.active ? 'success' : 'neutral'">{{ row.active ? 'Active' : 'Inactive' }}</UiBadge></template>
         <template #cell-auto_ack="{ row }"><UiBadge :color="row.auto_ack ? 'info' : 'neutral'">{{ row.auto_ack ? 'On' : 'Off' }}</UiBadge></template>
         <template v-if="canManage" #actions="{ row }">

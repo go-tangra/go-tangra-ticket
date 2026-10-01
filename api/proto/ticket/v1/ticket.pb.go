@@ -575,9 +575,15 @@ func (x *TicketFilter) GetPageSize() int32 {
 }
 
 type ListTicketsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Filter        *TicketFilter          `protobuf:"bytes,2,opt,name=filter,proto3" json:"filter,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Filter   *TicketFilter          `protobuf:"bytes,2,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional order: sort is one of subject, status, priority, assignee,
+	// created_at, updated_at; order is "asc" or "desc" (default: the field's own
+	// direction). Both empty keep the default order (created_at, newest first).
+	// Unknown values are refused with InvalidArgument.
+	Sort          string `protobuf:"bytes,3,opt,name=sort,proto3" json:"sort,omitempty"`
+	Order         string `protobuf:"bytes,4,opt,name=order,proto3" json:"order,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -624,6 +630,20 @@ func (x *ListTicketsRequest) GetFilter() *TicketFilter {
 		return x.Filter
 	}
 	return nil
+}
+
+func (x *ListTicketsRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListTicketsRequest) GetOrder() string {
+	if x != nil {
+		return x.Order
+	}
+	return ""
 }
 
 type ListTicketsResponse struct {
@@ -806,10 +826,12 @@ const file_ticket_v1_ticket_proto_rawDesc = "" +
 	"\x06tag_id\x18\x04 \x01(\tR\x05tagId\x12\x14\n" +
 	"\x05query\x18\x05 \x01(\tR\x05query\x12\x12\n" +
 	"\x04page\x18\x06 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\a \x01(\x05R\bpageSize\"b\n" +
+	"\tpage_size\x18\a \x01(\x05R\bpageSize\"\x8c\x01\n" +
 	"\x12ListTicketsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12/\n" +
-	"\x06filter\x18\x02 \x01(\v2\x17.ticket.v1.TicketFilterR\x06filter\"T\n" +
+	"\x06filter\x18\x02 \x01(\v2\x17.ticket.v1.TicketFilterR\x06filter\x12\x12\n" +
+	"\x04sort\x18\x03 \x01(\tR\x04sort\x12\x14\n" +
+	"\x05order\x18\x04 \x01(\tR\x05order\"T\n" +
 	"\x13ListTicketsResponse\x12'\n" +
 	"\x05items\x18\x01 \x03(\v2\x11.ticket.v1.TicketR\x05items\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x03R\x05total\"}\n" +

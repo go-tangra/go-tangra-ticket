@@ -37,6 +37,7 @@ func Run(t *testing.T, newStore Factory) {
 		"rules":       testRules,
 		"mailboxes":   testMailboxes,
 		"history":     testHistory,
+		"paging":      testPaging,
 		"stats":       testStats,
 		"backup":      testBackup,
 		"isolation":   testIsolation,
@@ -184,9 +185,9 @@ func testFilters(t *testing.T, s repo.Store) {
 	must(t, s.CreateTag(ctx, tag))
 	must(t, s.SetTicketTags(ctx, TenantA, ids[2], []string{tag.ID}))
 
-	list := func(f store.TicketFilter) ([]store.Ticket, int64) {
+	list := func(f store.TicketFilter) ([]store.Ticket, int) {
 		t.Helper()
-		items, total, err := s.ListTickets(ctx, TenantA, f)
+		items, total, _, err := s.ListTickets(ctx, TenantA, f, Req(t, store.TicketList, 0, 0, "", ""))
 		must(t, err)
 		return items, total
 	}
@@ -217,13 +218,20 @@ func testFilters(t *testing.T, s repo.Store) {
 	if _, n := list(store.TicketFilter{Query: "%"}); n != 0 {
 		t.Fatalf("wildcard query must be literal, got %d", n)
 	}
-	page, n := list(store.TicketFilter{Page: 2, PageSize: 2})
-	if n != 5 || len(page) != 2 || page[0].ID != ids[2] {
+	page, n, applied, err := s.ListTickets(ctx, TenantA, store.TicketFilter{}, Req(t, store.TicketList, 2, 2, "", ""))
+	must(t, err)
+	if n != 5 || len(page) != 2 || page[0].ID != ids[2] || applied.Page != 2 {
 		t.Fatalf("page 2 = %d/%d", len(page), n)
 	}
-	page, n = list(store.TicketFilter{Page: 9, PageSize: 2})
-	if n != 5 || len(page) != 0 {
-		t.Fatalf("page 9 = %d/%d", len(page), n)
+	page, n, applied, err = s.ListTickets(ctx, TenantA, store.TicketFilter{}, Req(t, store.TicketList, 9, 2, "", ""))
+	must(t, err)
+	if n != 5 || len(page) != 1 || applied.Page != 3 || page[0].ID != ids[0] {
+		t.Fatalf("page 9 clamps to the last page: %d/%d page %d", len(page), n, applied.Page)
+	}
+	page, n, applied, err = s.ListTickets(ctx, TenantA, store.TicketFilter{TagID: "not-a-uuid"}, Req(t, store.TicketList, 4, 2, "", ""))
+	must(t, err)
+	if n != 0 || len(page) != 0 || applied.Page != 1 {
+		t.Fatalf("malformed tag id = %d/%d page %d", len(page), n, applied.Page)
 	}
 }
 
@@ -683,7 +691,7 @@ func testIsolation(t *testing.T, s repo.Store) {
 	now := base()
 	tk := NewTicket(TenantA, "secret", now)
 	must(t, s.CreateTicket(ctx, tk))
-	items, total, err := s.ListTickets(ctx, TenantB, store.TicketFilter{})
+	items, total, _, err := s.ListTickets(ctx, TenantB, store.TicketFilter{}, Req(t, store.TicketList, 0, 0, "", ""))
 	must(t, err)
 	if total != 0 || len(items) != 0 {
 		t.Fatal("tenant B sees tenant A tickets")

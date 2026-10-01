@@ -16,6 +16,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
@@ -152,20 +154,14 @@ func settings(m store.Mailbox) map[string]any {
 	return map[string]any{"address": m.Address, "active": m.Active, "auto_ack": m.AutoAck}
 }
 
-// List returns the tenant's mailboxes by address.
-func (s *Service) List(ctx context.Context, subj authz.Subjects) ([]store.Mailbox, error) {
+// List returns one page of the tenant's mailboxes in req's order
+// (store.MailboxList), the total and the applied (clamped) request.
+func (s *Service) List(ctx context.Context, subj authz.Subjects, req listquery.Request) ([]store.Mailbox, int, listquery.Request, error) {
 	tenantID, err := tenantOf(subj)
 	if err != nil {
-		return nil, err
+		return nil, 0, req, err
 	}
-	out, err := s.d.Store.ListMailboxes(ctx, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	if out == nil {
-		out = []store.Mailbox{}
-	}
-	return out, nil
+	return s.d.Store.PageMailboxes(ctx, tenantID, req)
 }
 
 // Get returns one mailbox of the tenant.

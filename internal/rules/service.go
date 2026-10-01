@@ -14,6 +14,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
@@ -286,23 +288,21 @@ func reasonOf(err error) string {
 	return "error"
 }
 
-// List returns every rule of the tenant in evaluation order.
-func (s *Service) List(ctx context.Context, subj authz.Subjects) ([]store.Rule, error) {
+// List returns one page of the tenant's rules in req's order (store.RuleList,
+// evaluation order by default), the total and the applied (clamped) request.
+func (s *Service) List(ctx context.Context, subj authz.Subjects, req listquery.Request) ([]store.Rule, int, listquery.Request, error) {
 	tenantID, err := tenantOf(subj)
 	if err != nil {
-		return nil, err
+		return nil, 0, req, err
 	}
-	out, err := s.d.Store.ListRules(ctx, tenantID)
+	out, total, req, err := s.d.Store.PageRules(ctx, tenantID, req)
 	if err != nil {
-		return nil, err
+		return nil, 0, req, err
 	}
 	for i := range out {
 		out[i] = present(out[i])
 	}
-	if out == nil {
-		out = []store.Rule{}
-	}
-	return out, nil
+	return out, total, req, nil
 }
 
 // Get returns one rule of the tenant.

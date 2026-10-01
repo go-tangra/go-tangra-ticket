@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
@@ -327,9 +329,10 @@ func TestGetAndList(t *testing.T) {
 		t.Fatalf("cross-tenant get: %v", err)
 	}
 
-	list := func(fl store.TicketFilter) ([]View, int64) {
+	def, _ := listquery.New(0, 0, "", "", store.TicketList)
+	list := func(fl store.TicketFilter) ([]View, int) {
 		t.Helper()
-		items, total, err := f.svc.List(ctx, agentOf(tenantA), fl)
+		items, total, _, err := f.svc.List(ctx, agentOf(tenantA), fl, def)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -357,18 +360,23 @@ func TestGetAndList(t *testing.T) {
 	if items, _ := list(store.TicketFilter{Status: store.StatusOpen}); len(items) != 2 {
 		t.Fatal("status filter")
 	}
-	if items, total := list(store.TicketFilter{Page: 2, PageSize: 1}); total != 2 || len(items) != 1 || items[0].ID != a.ID {
+	p2, _ := listquery.New(2, 1, "", "", store.TicketList)
+	if items, total, applied, err := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{}, p2); err != nil || total != 2 || len(items) != 1 || items[0].ID != a.ID || applied.Page != 2 {
 		t.Fatal("paging")
 	}
-	if _, _, err := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{Status: "unspecified"}); !errors.Is(err, ErrInvalidStatus) {
+	byPrio, _ := listquery.New(0, 0, "priority", "", store.TicketList)
+	if items, _, applied, _ := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{}, byPrio); len(items) != 2 || items[0].ID != b.ID || applied.Order != listquery.Desc {
+		t.Fatal("priority sort (urgent first)")
+	}
+	if _, _, _, err := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{Status: "unspecified"}, def); !errors.Is(err, ErrInvalidStatus) {
 		t.Fatalf("bad status filter: %v", err)
 	}
 	var ve ValidationError
-	if _, _, err := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{Priority: "meh"}); !errors.As(err, &ve) {
+	if _, _, _, err := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{Priority: "meh"}, def); !errors.As(err, &ve) {
 		t.Fatalf("bad priority filter: %v", err)
 	}
 	f.st.FailNext("ListTickets")
-	if _, _, err := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{}); err == nil {
+	if _, _, _, err := f.svc.List(ctx, agentOf(tenantA), store.TicketFilter{}, def); err == nil {
 		t.Fatal("store failure swallowed")
 	}
 }

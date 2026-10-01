@@ -3,7 +3,6 @@ package httpapi
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
@@ -40,29 +39,25 @@ func (s *Server) withSubject(method, path string, fn func(w http.ResponseWriter,
 	})
 }
 
-func queryInt(r *http.Request, name string) int {
-	n, err := strconv.Atoi(r.URL.Query().Get(name))
-	if err != nil {
-		return 0
-	}
-	return n
-}
-
 // registerTickets mounts the ticket lifecycle routes (US1). Route permissions
 // are enforced by the authorize middleware from the OpenAPI document.
 func (s *Server) registerTickets(svc *tickets.Service) {
 	fail := func(w http.ResponseWriter, r *http.Request, err error) { Fail(w, r, s.log, ticketError(err)) }
 
 	s.withSubject("GET", Prefix+"/tickets", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {
+		req, ok := parseList(w, r, store.TicketList)
+		if !ok {
+			return
+		}
 		q := r.URL.Query()
 		f := store.TicketFilter{Status: q.Get("status"), Priority: q.Get("priority"), AssigneeID: q.Get("assignee_id"),
-			TagID: q.Get("tag_id"), Query: q.Get("query"), Page: queryInt(r, "page"), PageSize: queryInt(r, "page_size")}
-		items, total, err := svc.List(r.Context(), subj, f)
+			TagID: q.Get("tag_id"), Query: q.Get("query")}
+		items, total, req, err := svc.List(r.Context(), subj, f, req)
 		if err != nil {
 			fail(w, r, err)
 			return
 		}
-		WriteJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
+		writePage(w, items, total, req)
 	})
 
 	s.withSubject("POST", Prefix+"/tickets", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {

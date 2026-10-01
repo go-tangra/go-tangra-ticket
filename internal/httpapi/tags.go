@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/tags"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/tickets"
 )
@@ -32,12 +33,16 @@ func (s *Server) registerTags(svc *tags.Service, tk *tickets.Service) {
 	fail := func(w http.ResponseWriter, r *http.Request, err error) { Fail(w, r, s.log, tagError(err)) }
 
 	s.withSubject("GET", Prefix+"/tags", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {
-		items, err := svc.List(r.Context(), subj, r.URL.Query().Get("kind"))
+		req, ok := parseList(w, r, store.TagList)
+		if !ok {
+			return
+		}
+		items, total, req, err := svc.List(r.Context(), subj, r.URL.Query().Get("kind"), req)
 		if err != nil {
 			fail(w, r, err)
 			return
 		}
-		WriteJSON(w, http.StatusOK, map[string]any{"items": items})
+		writePage(w, items, total, req)
 	})
 
 	s.withSubject("POST", Prefix+"/tags", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {

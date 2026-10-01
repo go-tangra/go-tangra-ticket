@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/rules"
+	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
 
 // ruleFail answers a rules refusal: invalid_rule carries the offending field
@@ -30,12 +31,16 @@ func (s *Server) ruleFail(w http.ResponseWriter, r *http.Request, err error) {
 // registerRules mounts the triage-rule routes (US4, rules:manage).
 func (s *Server) registerRules(svc *rules.Service) {
 	s.withSubject("GET", Prefix+"/rules", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {
-		items, err := svc.List(r.Context(), subj)
+		req, ok := parseList(w, r, store.RuleList)
+		if !ok {
+			return
+		}
+		items, total, req, err := svc.List(r.Context(), subj, req)
 		if err != nil {
 			s.ruleFail(w, r, err)
 			return
 		}
-		WriteJSON(w, http.StatusOK, map[string]any{"items": items})
+		writePage(w, items, total, req)
 	})
 
 	s.withSubject("POST", Prefix+"/rules", func(w http.ResponseWriter, r *http.Request, subj authz.Subjects) {

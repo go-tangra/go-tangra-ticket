@@ -7,6 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	ticketv1 "github.com/go-tangra/go-tangra-ticket/v4/api/proto/ticket/v1"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/comments"
@@ -88,7 +90,9 @@ func (s *TicketsServer) Get(ctx context.Context, req *ticketv1.GetTicketRequest)
 	return ticketToPB(v), nil
 }
 
-// List returns one page of the request's tenant's tickets (newest first).
+// List returns one page of the request's tenant's tickets, newest first unless
+// the optional sort/order name another order (store.TicketList). A page beyond
+// the last one is empty, as it always was for module callers.
 func (s *TicketsServer) List(ctx context.Context, req *ticketv1.ListTicketsRequest) (*ticketv1.ListTicketsResponse, error) {
 	if s.d.Tickets == nil {
 		return nil, status.Error(codes.Unimplemented, "not implemented")
@@ -101,14 +105,20 @@ func (s *TicketsServer) List(ctx context.Context, req *ticketv1.ListTicketsReque
 	if f.GetPageSize() > tickets.MaxPageSize || f.GetPageSize() < 0 || f.GetPage() < 0 || len(f.GetQuery()) > 200 {
 		return nil, status.Error(codes.InvalidArgument, "bad_request")
 	}
-	items, total, err := s.d.Tickets.List(ctx, subj, store.TicketFilter{
-		Status: f.GetStatus(), Priority: f.GetPriority(), AssigneeID: f.GetAssigneeId(), TagID: f.GetTagId(),
-		Query: f.GetQuery(), Page: int(f.GetPage()), PageSize: int(f.GetPageSize()),
-	})
+	lq, err := listquery.New(int(f.GetPage()), int(f.GetPageSize()), req.GetSort(), listquery.Dir(req.GetOrder()), store.TicketList)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "bad_request")
+	}
+	items, total, applied, err := s.d.Tickets.List(ctx, subj, store.TicketFilter{
+		Status: f.GetStatus(), Priority: f.GetPriority(), AssigneeID: f.GetAssigneeId(), TagID: f.GetTagId(), Query: f.GetQuery(),
+	}, lq)
 	if err != nil {
 		return nil, GRPCError(err)
 	}
-	out := &ticketv1.ListTicketsResponse{Items: make([]*ticketv1.Ticket, 0, len(items)), Total: total}
+	if applied.Page != lq.Page {
+		items = nil
+	}
+	out := &ticketv1.ListTicketsResponse{Items: make([]*ticketv1.Ticket, 0, len(items)), Total: int64(total)}
 	for _, v := range items {
 		out.Items = append(out.Items, ticketToPB(v))
 	}

@@ -331,6 +331,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Long-lived SSE stream. The route timeout is raised to the gateway's 5-minute route maximum so the normal 30 s forward timeout never cuts it; the module closes the stream at 290 s and the client resumes with last_id. */
         get: operations["streamEvents"];
         put?: never;
         post?: never;
@@ -459,7 +460,47 @@ export interface components {
         };
         TicketPage: {
             items: components["schemas"]["Ticket"][];
+            /** @description records matching the filters */
             total: number;
+            /** @description the page returned (clamped to the last page) */
+            page: number;
+            page_size: number;
+            sort: string;
+            /** @enum {string} */
+            order: "asc" | "desc";
+        };
+        TagPage: {
+            items: components["schemas"]["Tag"][];
+            /** @description records matching the filters */
+            total: number;
+            /** @description the page returned (clamped to the last page) */
+            page: number;
+            page_size: number;
+            sort: string;
+            /** @enum {string} */
+            order: "asc" | "desc";
+        };
+        RulePage: {
+            items: components["schemas"]["Rule"][];
+            /** @description records matching the filters */
+            total: number;
+            /** @description the page returned (clamped to the last page) */
+            page: number;
+            page_size: number;
+            sort: string;
+            /** @enum {string} */
+            order: "asc" | "desc";
+        };
+        MailboxPage: {
+            items: components["schemas"]["Mailbox"][];
+            /** @description records matching the filters */
+            total: number;
+            /** @description the page returned (clamped to the last page) */
+            page: number;
+            page_size: number;
+            sort: string;
+            /** @enum {string} */
+            order: "asc" | "desc";
         };
         TicketCreate: {
             subject: string;
@@ -649,8 +690,12 @@ export interface components {
         id: string;
         /** @example 018f3a2b-0000-7000-8000-000000000002 */
         attId: string;
+        /** @description 1-based page; a page beyond the last answers the last page. */
         page: number;
+        /** @description rows per page (default 25). */
         pageSize: number;
+        /** @description sort direction (default the sort field's own direction). */
+        order: "asc" | "desc";
     };
     requestBodies: never;
     headers: never;
@@ -661,8 +706,14 @@ export interface operations {
     listTickets: {
         parameters: {
             query?: {
+                /** @description 1-based page; a page beyond the last answers the last page. */
                 page?: components["parameters"]["page"];
+                /** @description rows per page (default 25). */
                 page_size?: components["parameters"]["pageSize"];
+                /** @description default created_at (newest first); status/priority sort by workflow/urgency rank, unassigned last */
+                sort?: "subject" | "status" | "priority" | "assignee" | "created_at" | "updated_at";
+                /** @description sort direction (default the sort field's own direction). */
+                order?: components["parameters"]["order"];
                 status?: string;
                 priority?: string;
                 /** @description 'none' selects unassigned tickets */
@@ -676,7 +727,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description page of tickets (newest first) */
+            /** @description page of tickets (newest first unless sorted) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1095,6 +1146,14 @@ export interface operations {
         parameters: {
             query?: {
                 kind?: components["schemas"]["TagKind"];
+                /** @description 1-based page; a page beyond the last answers the last page. */
+                page?: components["parameters"]["page"];
+                /** @description rows per page (default 25). */
+                page_size?: components["parameters"]["pageSize"];
+                /** @description default name */
+                sort?: "name";
+                /** @description sort direction (default the sort field's own direction). */
+                order?: components["parameters"]["order"];
             };
             header?: never;
             path?: never;
@@ -1102,15 +1161,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description tags */
+            /** @description page of tags */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items: components["schemas"]["Tag"][];
-                    };
+                    "application/json": components["schemas"]["TagPage"];
                 };
             };
             default: components["responses"]["Error"];
@@ -1199,22 +1256,29 @@ export interface operations {
     };
     listRules: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 1-based page; a page beyond the last answers the last page. */
+                page?: components["parameters"]["page"];
+                /** @description rows per page (default 25). */
+                page_size?: components["parameters"]["pageSize"];
+                /** @description default sort_order (evaluation order) */
+                sort?: "sort_order" | "name";
+                /** @description sort direction (default the sort field's own direction). */
+                order?: components["parameters"]["order"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description rules (sort order) */
+            /** @description page of rules (evaluation order unless sorted) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items: components["schemas"]["Rule"][];
-                    };
+                    "application/json": components["schemas"]["RulePage"];
                 };
             };
             default: components["responses"]["Error"];
@@ -1354,22 +1418,29 @@ export interface operations {
     };
     listMailboxes: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 1-based page; a page beyond the last answers the last page. */
+                page?: components["parameters"]["page"];
+                /** @description rows per page (default 25). */
+                page_size?: components["parameters"]["pageSize"];
+                /** @description default address; name is the display name */
+                sort?: "address" | "name";
+                /** @description sort direction (default the sort field's own direction). */
+                order?: components["parameters"]["order"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description mailboxes */
+            /** @description page of mailboxes */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items: components["schemas"]["Mailbox"][];
-                    };
+                    "application/json": components["schemas"]["MailboxPage"];
                 };
             };
             default: components["responses"]["Error"];

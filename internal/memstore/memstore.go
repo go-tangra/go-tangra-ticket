@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
 )
@@ -73,6 +75,13 @@ func (m *Mem) fail(method string) error {
 		return injectedErr{method}
 	}
 	return nil
+}
+
+// failLocked is fail for callers that do not hold mu.
+func (m *Mem) failLocked(method string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.fail(method)
 }
 
 // Audit returns a copy of the appended audit rows (tests).
@@ -179,13 +188,12 @@ func matchesQuery(t store.Ticket, q string) bool {
 }
 
 // ListTickets implements repo.Tickets.
-func (m *Mem) ListTickets(_ context.Context, tenantID string, f store.TicketFilter) ([]store.Ticket, int64, error) {
+func (m *Mem) ListTickets(_ context.Context, tenantID string, f store.TicketFilter, req listquery.Request) ([]store.Ticket, int, listquery.Request, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if err := m.fail("ListTickets"); err != nil {
-		return nil, 0, err
+		return nil, 0, req, err
 	}
-	f = f.Normalized(100)
 	var all []store.Ticket
 	for _, t := range m.tickets {
 		switch {
@@ -200,19 +208,14 @@ func (m *Mem) ListTickets(_ context.Context, tenantID string, f store.TicketFilt
 		}
 		all = append(all, t)
 	}
-	sort.Slice(all, func(i, j int) bool {
-		if !all[i].CreatedAt.Equal(all[j].CreatedAt) {
-			return all[i].CreatedAt.After(all[j].CreatedAt)
-		}
-		return all[i].ID > all[j].ID
-	})
-	total := int64(len(all))
-	off := f.Offset()
-	if off >= len(all) {
-		return []store.Ticket{}, total, nil
-	}
-	end := min(off+f.PageSize, len(all))
-	return append([]store.Ticket(nil), all[off:end]...), total, nil
+	listquery.SortSlice(all, req, store.TicketSortKey, func(t store.Ticket) string { return t.ID })
+	return window(all, req)
+}
+
+// window returns the page of sorted items for req (clamped), copied.
+func window[T any](items []T, req listquery.Request) ([]T, int, listquery.Request, error) {
+	page, total, applied := listquery.Window(items, req)
+	return append([]T{}, page...), total, applied, nil
 }
 
 // UpdateTicket implements repo.Tickets.
@@ -635,6 +638,19 @@ func (m *Mem) ListTags(_ context.Context, tenantID, kind string) ([]store.Tag, e
 	return out, nil
 }
 
+// PageTags implements repo.Tags.
+func (m *Mem) PageTags(ctx context.Context, tenantID, kind string, req listquery.Request) ([]store.Tag, int, listquery.Request, error) {
+	if err := m.failLocked("PageTags"); err != nil {
+		return nil, 0, req, err
+	}
+	all, err := m.ListTags(ctx, tenantID, kind)
+	if err != nil {
+		return nil, 0, req, err
+	}
+	listquery.SortSlice(all, req, func(t store.Tag, _ string) any { return t.Name }, func(t store.Tag) string { return t.ID })
+	return window(all, req)
+}
+
 // UpdateTag implements repo.Tags (the kind is never changed).
 func (m *Mem) UpdateTag(_ context.Context, t store.Tag) error {
 	m.mu.Lock()
@@ -852,6 +868,24 @@ func (m *Mem) ListRules(_ context.Context, tenantID string) ([]store.Rule, error
 	return m.listRules(tenantID, false), nil
 }
 
+// PageRules implements repo.Rules.
+func (m *Mem) PageRules(ctx context.Context, tenantID string, req listquery.Request) ([]store.Rule, int, listquery.Request, error) {
+	if err := m.failLocked("PageRules"); err != nil {
+		return nil, 0, req, err
+	}
+	all, err := m.ListRules(ctx, tenantID)
+	if err != nil {
+		return nil, 0, req, err
+	}
+	listquery.SortSlice(all, req, func(r store.Rule, field string) any {
+		if field == "name" {
+			return r.Name
+		}
+		return int64(r.SortOrder)
+	}, func(r store.Rule) string { return r.ID })
+	return window(all, req)
+}
+
 // ListEnabledRules implements repo.Rules.
 func (m *Mem) ListEnabledRules(_ context.Context, tenantID string) ([]store.Rule, error) {
 	m.mu.Lock()
@@ -958,6 +992,24 @@ func (m *Mem) ListMailboxes(_ context.Context, tenantID string) ([]store.Mailbox
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Address < out[j].Address })
 	return out, nil
+}
+
+// PageMailboxes implements repo.Mailboxes.
+func (m *Mem) PageMailboxes(ctx context.Context, tenantID string, req listquery.Request) ([]store.Mailbox, int, listquery.Request, error) {
+	if err := m.failLocked("PageMailboxes"); err != nil {
+		return nil, 0, req, err
+	}
+	all, err := m.ListMailboxes(ctx, tenantID)
+	if err != nil {
+		return nil, 0, req, err
+	}
+	listquery.SortSlice(all, req, func(mb store.Mailbox, field string) any {
+		if field == "name" {
+			return mb.DisplayName
+		}
+		return mb.Address
+	}, func(mb store.Mailbox) string { return mb.ID })
+	return window(all, req)
 }
 
 // UpdateMailbox implements repo.Mailboxes.

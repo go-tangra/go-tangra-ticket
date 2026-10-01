@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/memstore"
@@ -58,11 +60,12 @@ func TestCreateNormalisesAndDefaults(t *testing.T) {
 	if len(rec.events) != 1 || rec.events[0].EventType != audit.MailboxCreate || rec.events[0].SubjectID != mb.ID {
 		t.Fatalf("audit = %+v", rec.events)
 	}
-	list, err := svc.List(ctx, agent(tenantA))
-	if err != nil || len(list) != 1 {
+	def, _ := listquery.New(0, 0, "", "", store.MailboxList)
+	list, total, _, err := svc.List(ctx, agent(tenantA), def)
+	if err != nil || len(list) != 1 || total != 1 {
 		t.Fatalf("list = %+v %v", list, err)
 	}
-	if list, _ := svc.List(ctx, agent(tenantB)); len(list) != 0 {
+	if list, _, _, _ := svc.List(ctx, agent(tenantB), def); len(list) != 0 {
 		t.Fatal("tenant B sees tenant A's mailbox")
 	}
 }
@@ -176,8 +179,8 @@ func TestDeleteGuarded(t *testing.T) {
 func TestStoreFailures(t *testing.T) {
 	svc, st, _ := newSvc()
 	ctx := context.Background()
-	st.FailNext("ListMailboxes")
-	if _, err := svc.List(ctx, agent(tenantA)); err == nil {
+	st.FailNext("PageMailboxes")
+	if _, _, _, err := svc.List(ctx, agent(tenantA), listquery.Request{Page: 1, PageSize: 25, Sort: "address", Order: listquery.Asc}); err == nil {
 		t.Fatal("list failure swallowed")
 	}
 	st.FailNext("CreateMailbox")

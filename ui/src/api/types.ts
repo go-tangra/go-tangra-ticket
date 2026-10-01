@@ -55,10 +55,17 @@ export interface Ticket {
   resolved_at?: string
 }
 
-export interface TicketPage {
-  items: Ticket[]
+/** One page of a list (go-tangra specs/032-server-side-tables list contract). */
+export interface Page<T> {
+  items: T[]
   total: number
+  page: number
+  page_size: number
+  sort: string
+  order: 'asc' | 'desc'
 }
+
+export type TicketPage = Page<Ticket>
 
 export interface HistoryEntry {
   id: string
@@ -83,8 +90,6 @@ export interface TicketFilter {
   assignee_id?: string | undefined
   tag_id?: string | undefined
   query?: string | undefined
-  page?: number | undefined
-  page_size?: number | undefined
 }
 
 export interface TicketCreate {

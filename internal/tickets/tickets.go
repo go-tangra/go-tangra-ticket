@@ -24,6 +24,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
@@ -56,7 +58,9 @@ const (
 	MaxDescription = 1 << 20
 	MaxName        = 200
 	MaxEmail       = 320
-	MaxPageSize    = 100
+	// MaxPageSize bounds the gRPC page size (ticket.v1 contract); the browser
+	// API allows up to store.TicketList's maximum.
+	MaxPageSize = 100
 )
 
 // Deps wire the service. Only Store is required; the others degrade to no-ops
@@ -284,23 +288,24 @@ func (s *Service) Get(ctx context.Context, subj authz.Subjects, id string) (View
 	return s.view(ctx, t, true)
 }
 
-// List returns one page of the caller's tickets (newest first) and the total.
-func (s *Service) List(ctx context.Context, subj authz.Subjects, f store.TicketFilter) ([]View, int64, error) {
+// List returns one page of the caller's tickets in req's order
+// (store.TicketList, newest first by default), the total and the applied
+// request (clamped to the last page).
+func (s *Service) List(ctx context.Context, subj authz.Subjects, f store.TicketFilter, req listquery.Request) ([]View, int, listquery.Request, error) {
 	tenantID, err := tenantOf(subj)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, req, err
 	}
 	if f.Status != "" && !store.ValidStatus(f.Status) {
-		return nil, 0, ErrInvalidStatus
+		return nil, 0, req, ErrInvalidStatus
 	}
 	if f.Priority != "" && !store.ValidPriority(f.Priority) {
-		return nil, 0, ValidationError{"priority", "unknown priority"}
+		return nil, 0, req, ValidationError{"priority", "unknown priority"}
 	}
 	f.Query = strings.TrimSpace(f.Query)
-	f = f.Normalized(MaxPageSize)
-	items, total, err := s.d.Store.ListTickets(ctx, tenantID, f)
+	items, total, req, err := s.d.Store.ListTickets(ctx, tenantID, f, req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, req, err
 	}
 	ids := make([]string, len(items))
 	for i, t := range items {
@@ -309,7 +314,7 @@ func (s *Service) List(ctx context.Context, subj authz.Subjects, f store.TicketF
 	tags := map[string][]store.Tag{}
 	if len(ids) > 0 {
 		if tags, err = s.d.Store.TagsForTickets(ctx, tenantID, ids); err != nil {
-			return nil, 0, err
+			return nil, 0, req, err
 		}
 	}
 	out := make([]View, len(items))
@@ -320,7 +325,7 @@ func (s *Service) List(ctx context.Context, subj authz.Subjects, f store.TicketF
 		}
 		out[i] = v
 	}
-	return out, total, nil
+	return out, total, req, nil
 }
 
 // Update applies a partial update of subject/description/priority; a priority

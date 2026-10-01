@@ -169,3 +169,52 @@ func TestTicketErrorMapping(t *testing.T) {
 		t.Fatalf("service backup: %v", err)
 	}
 }
+
+// Feature 032: ticket.v1 List keeps newest-first for callers that send no
+// order, honours the optional sort/order, refuses unknown values and still
+// answers an empty page beyond the end (module callers stop on it).
+func TestTicketsListSort(t *testing.T) {
+	s, _ := newTicketsServer(t)
+	ctx := context.Background()
+	withCaller(t, monitor, true)
+	for _, c := range []struct{ subject, priority string }{{"b-low", "low"}, {"a-urgent", "urgent"}, {"c-normal", "normal"}} {
+		if _, err := s.Create(ctx, &ticketv1.CreateTicketRequest{TenantId: tn, Subject: c.subject, Priority: c.priority}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	subjects := func(req *ticketv1.ListTicketsRequest) string {
+		t.Helper()
+		res, err := s.List(ctx, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := []string{}
+		for _, it := range res.GetItems() {
+			out = append(out, it.GetSubject())
+		}
+		return strings.Join(out, ",")
+	}
+	if got := subjects(&ticketv1.ListTicketsRequest{TenantId: tn}); got != "c-normal,a-urgent,b-low" {
+		t.Fatalf("default (newest first) = %s", got)
+	}
+	if got := subjects(&ticketv1.ListTicketsRequest{TenantId: tn, Sort: "priority"}); got != "a-urgent,c-normal,b-low" {
+		t.Fatalf("priority = %s", got)
+	}
+	if got := subjects(&ticketv1.ListTicketsRequest{TenantId: tn, Sort: "subject", Order: "desc"}); got != "c-normal,b-low,a-urgent" {
+		t.Fatalf("subject desc = %s", got)
+	}
+	if got := subjects(&ticketv1.ListTicketsRequest{TenantId: tn, Order: "asc"}); got != "b-low,a-urgent,c-normal" {
+		t.Fatalf("default field ascending = %s", got)
+	}
+	res, err := s.List(ctx, &ticketv1.ListTicketsRequest{TenantId: tn, Filter: &ticketv1.TicketFilter{Page: 4, PageSize: 1}})
+	if err != nil || len(res.GetItems()) != 0 || res.GetTotal() != 3 {
+		t.Fatalf("beyond the end = %+v %v", res, err)
+	}
+	for _, req := range []*ticketv1.ListTicketsRequest{
+		{TenantId: tn, Sort: "id"}, {TenantId: tn, Sort: "subject; DROP TABLE x"}, {TenantId: tn, Order: "up"},
+	} {
+		if _, err := s.List(ctx, req); status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("%v = %v", req, err)
+		}
+	}
+}

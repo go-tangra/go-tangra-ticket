@@ -166,8 +166,12 @@ type ticketJSON struct {
 }
 
 type pageJSON struct {
-	Items []ticketJSON `json:"items"`
-	Total *int         `json:"total"`
+	Items    []ticketJSON `json:"items"`
+	Total    *int         `json:"total"`
+	Page     int          `json:"page"`
+	PageSize int          `json:"page_size"`
+	Sort     string       `json:"sort"`
+	Order    string       `json:"order"`
 }
 
 func reasonOf(t *testing.T, w *httptest.ResponseRecorder) string {
@@ -356,8 +360,8 @@ func TestTicketListFiltersAndPaging(t *testing.T) {
 	if *pg.Total != 3 || ids(pg) != a.ID {
 		t.Fatalf("page 2 = %d %s", *pg.Total, ids(pg))
 	}
-	if pg := list(url.Values{"page": {"9"}}); *pg.Total != 3 || len(pg.Items) != 0 {
-		t.Fatalf("past the end = %+v", pg)
+	if pg := list(url.Values{"page": {"9"}}); *pg.Total != 3 || len(pg.Items) != 3 || pg.Page != 1 {
+		t.Fatalf("past the end clamps to the last page = %+v", pg)
 	}
 	if pg := list(url.Values{}); len(pg.Items[2].Tags) != 1 || pg.Items[2].Tags[0]["name"] != "hardware" {
 		t.Fatalf("items carry tags: %+v", pg.Items[2])
@@ -368,7 +372,7 @@ func TestTicketListFiltersAndPaging(t *testing.T) {
 	if w := h.do("GET", p+"/tickets?priority=meh", "viewer-a", ""); w.Code != 422 {
 		t.Fatalf("bad priority filter = %d", w.Code)
 	}
-	if w := h.do("GET", p+"/tickets?page_size=101", "viewer-a", ""); w.Code != 422 {
+	if w := h.do("GET", p+"/tickets?page_size=201", "viewer-a", ""); w.Code != 422 {
 		t.Fatalf("page_size cap = %d", w.Code)
 	}
 }

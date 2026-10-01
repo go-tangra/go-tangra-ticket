@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-tangra/go-tangra/v4/listquery"
+
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/repo/repotest"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/store"
@@ -22,10 +24,16 @@ func TestFailNextEveryMethod(t *testing.T) {
 	tn := repotest.TenantA
 	tk := repotest.NewTicket(tn, "x", time.Now())
 	calls := map[string]func() error{
-		"CreateTicket":              func() error { return m.CreateTicket(ctx, tk) },
-		"GetTicket":                 func() error { _, err := m.GetTicket(ctx, tn, "x"); return err },
-		"FindTicketByExternalID":    func() error { _, err := m.FindTicketByExternalID(ctx, tn, "x"); return err },
-		"ListTickets":               func() error { _, _, err := m.ListTickets(ctx, tn, store.TicketFilter{}); return err },
+		"CreateTicket":           func() error { return m.CreateTicket(ctx, tk) },
+		"GetTicket":              func() error { _, err := m.GetTicket(ctx, tn, "x"); return err },
+		"FindTicketByExternalID": func() error { _, err := m.FindTicketByExternalID(ctx, tn, "x"); return err },
+		"ListTickets": func() error {
+			_, _, _, err := m.ListTickets(ctx, tn, store.TicketFilter{}, listquery.Request{})
+			return err
+		},
+		"PageTags":                  func() error { _, _, _, err := m.PageTags(ctx, tn, "", listquery.Request{}); return err },
+		"PageRules":                 func() error { _, _, _, err := m.PageRules(ctx, tn, listquery.Request{}); return err },
+		"PageMailboxes":             func() error { _, _, _, err := m.PageMailboxes(ctx, tn, listquery.Request{}); return err },
 		"UpdateTicket":              func() error { _, err := m.UpdateTicket(ctx, tn, "x", store.TicketPatch{}, time.Time{}); return err },
 		"SetAssignee":               func() error { _, err := m.SetAssignee(ctx, tn, "x", "", "", time.Time{}); return err },
 		"SetStatus":                 func() error { _, err := m.SetStatus(ctx, tn, "x", "open", time.Time{}); return err },

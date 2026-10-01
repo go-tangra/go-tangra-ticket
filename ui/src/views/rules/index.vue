@@ -2,10 +2,10 @@
 // Triage rules in evaluation order: each row summarises its conditions (or
 // expression) and actions, with an enable toggle; create/edit in the builder
 // drawer; delete asks first.
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiSwitch, useConfirm, useToast, type Column } from '@go-tangra/ui'
-import { useRules } from '@/stores/rules'
+import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiSwitch, useConfirm, useListQuery, useToast, type Column } from '@go-tangra/ui'
+import { RULE_SORTS, useRules } from '@/stores/rules'
 import { useTickets } from '@/stores/tickets'
 import { actionSummary, ruleConditionSummary } from '@/schemas'
 import type { Rule } from '@/api/types'
@@ -20,8 +20,16 @@ const toast = useToast()
 const canManage = computed(() => ability.can('manage', 'TicketRule'))
 const error = ref('')
 
+// Server-paged; evaluation order (sort order) unless sorted by name.
+const lq = useListQuery('rules', { sortable: [...RULE_SORTS], defaultSort: { key: 'sort_order', dir: 'asc' } })
+async function load(): Promise<void> {
+  const page = await store.list(lq.query.value)
+  if (page !== null) lq.clampTo(page)
+}
+watch(lq.query, () => void load())
+
 onMounted(() => {
-  void store.list()
+  void load()
   void tickets.assignableUsers()
 })
 const userName = (id: string) => tickets.users.find((u) => u.id === id)?.name || id
@@ -59,8 +67,8 @@ async function remove(r: Rule): Promise<void> {
 
 type Row = Rule & Record<string, unknown>
 const columns: Column<Row>[] = [
-  { key: 'sort_order', label: 'Order', width: 'sm' },
-  { key: 'name', label: 'Name' },
+  { key: 'sort_order', label: 'Order', width: 'sm', sortable: true },
+  { key: 'name', label: 'Name', sortable: true },
   { key: 'conditions', label: 'When', hideOnStack: true, format: (r) => ruleConditionSummary(r) },
   { key: 'actions', label: 'Then', format: (r) => r.actions.map((a) => actionSummary(a, userName)).join('; ') },
   { key: 'enabled', label: 'Enabled', width: 'sm' },
@@ -72,12 +80,12 @@ const rows = computed(() => store.items as Row[])
   <UiPage title="Rules">
     <template #actions>
       <UiButton v-if="canManage" icon="mdi-plus" data-test="rule-new" @click="newRule">New rule</UiButton>
-      <UiButton variant="text" icon="mdi-refresh" icon-only label="Refresh" @click="store.list()" />
+      <UiButton variant="text" icon="mdi-refresh" icon-only label="Refresh" @click="load()" />
     </template>
     <UiAlert v-if="error" kind="error" class="mb-3" data-test="rule-error">{{ error }}</UiAlert>
     <UiAlert v-if="store.error" kind="error" class="mb-3">{{ store.error }}</UiAlert>
     <UiCard :padded="false">
-      <UiDataTable :items="rows" :columns="columns" :loading="store.loading" caption="Triage rules in evaluation order" empty-title="No rules" empty-text="Rules tag, assign, prioritise or drop new inbound mail." :row-attrs="(r) => ({ 'data-test': 'rule-row-' + r.id })" data-test="rules-table">
+      <UiDataTable :items="rows" :columns="columns" :loading="store.loading" :total="store.total" :page="lq.page.value" :page-size="lq.pageSize.value" :sort="lq.sort.value" row-key="id" caption="Triage rules in evaluation order" empty-title="No rules" empty-text="Rules tag, assign, prioritise or drop new inbound mail." :row-attrs="(r) => ({ 'data-test': 'rule-row-' + r.id })" data-test="rules-table" @update:page="lq.setPage" @update:page-size="lq.setPageSize" @update:sort="lq.setSort">
         <template #cell-actions="{ row }">
           <span class="flex flex-wrap gap-1">
             <UiBadge v-for="(a, i) in row.actions" :key="i" size="xs" :color="a.type === 'drop' ? 'error' : 'neutral'">{{ actionSummary(a, userName) }}</UiBadge>

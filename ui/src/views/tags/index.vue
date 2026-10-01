@@ -3,11 +3,11 @@
 // none is chosen) and a description. Filter by kind; create/edit in a record
 // drawer (the kind is fixed after creation); delete asks first and removes the
 // tag from every ticket.
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAbility } from '@casl/vue'
-import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, UiSelect, useConfirm, useToast, type Column, type SelectOption } from '@go-tangra/ui'
+import { UiPage, UiAlert, UiCard, UiButton, UiBadge, UiDataTable, UiRecordDrawer, UiSelect, useConfirm, useListQuery, useToast, type Column, type SelectOption } from '@go-tangra/ui'
 import { zodToFields } from '@go-tangra/ui/forms'
-import { useTags } from '@/stores/tags'
+import { TAG_SORTS, useTags } from '@/stores/tags'
 import { tagSchema, TAG_KIND_OPTIONS } from '@/schemas'
 import { TAG_COLORS, TAG_COLOR_LABELS, tagColor } from './colors'
 import type { Tag, TagInput, TagKind } from '@/api/types'
@@ -21,10 +21,18 @@ const canManage = computed(() => ability.can('manage', 'TicketTag'))
 const error = ref('')
 const kind = ref<TagKind | ''>('')
 
-onMounted(() => void store.list())
+// Server-paged by name; the kind filter starts again at page 1.
+const lq = useListQuery('tags', { sortable: [...TAG_SORTS], defaultSort: { key: 'name', dir: 'asc' } })
+async function load(): Promise<void> {
+  const page = await store.list({ ...lq.query.value, kind: kind.value || undefined })
+  if (page !== null) lq.clampTo(page)
+}
+watch(lq.query, () => void load())
+onMounted(() => void load())
 function filterKind(v: unknown): void {
   kind.value = v === 'tag' || v === 'category' ? v : ''
-  void store.list(kind.value)
+  if (lq.page.value !== 1) lq.resetPage()
+  else void load()
 }
 
 const colorOptions: SelectOption[] = TAG_COLORS.map((c) => ({ title: TAG_COLOR_LABELS[c], value: c }))
@@ -70,7 +78,7 @@ async function remove(t: Tag): Promise<void> {
 
 type Row = Tag & Record<string, unknown>
 const columns: Column<Row>[] = [
-  { key: 'name', label: 'Name' },
+  { key: 'name', label: 'Name', sortable: true },
   { key: 'kind', label: 'Kind', width: 'sm' },
   { key: 'description', label: 'Description', hideOnStack: true },
 ]
@@ -81,7 +89,7 @@ const rows = computed(() => store.items as Row[])
   <UiPage title="Tags">
     <template #actions>
       <UiButton v-if="canManage" icon="mdi-plus" data-test="tag-new" @click="newTag">New tag</UiButton>
-      <UiButton variant="text" icon="mdi-refresh" icon-only label="Refresh" @click="store.list(kind)" />
+      <UiButton variant="text" icon="mdi-refresh" icon-only label="Refresh" @click="load()" />
     </template>
     <UiAlert v-if="error" kind="error" class="mb-3" data-test="tag-error">{{ error }}</UiAlert>
     <UiAlert v-if="store.error" kind="error" class="mb-3">{{ store.error }}</UiAlert>
@@ -89,7 +97,7 @@ const rows = computed(() => store.items as Row[])
       <UiSelect id="tag-kind-filter" label="Kind" :model-value="kind" :options="TAG_KIND_OPTIONS" placeholder="All kinds" size="sm" data-test="tag-kind-filter" @update:model-value="filterKind" />
     </div>
     <UiCard :padded="false">
-      <UiDataTable :items="rows" :columns="columns" :loading="store.loading" caption="Tags and categories" empty-title="No tags" empty-text="Create tags and categories to organise tickets; rules can also create them." :row-attrs="(t) => ({ 'data-test': 'tag-row-' + t.id })" data-test="tags-table">
+      <UiDataTable :items="rows" :columns="columns" :loading="store.loading" :total="store.total" :page="lq.page.value" :page-size="lq.pageSize.value" :sort="lq.sort.value" row-key="id" caption="Tags and categories" empty-title="No tags" empty-text="Create tags and categories to organise tickets; rules can also create them." :row-attrs="(t) => ({ 'data-test': 'tag-row-' + t.id })" data-test="tags-table" @update:page="lq.setPage" @update:page-size="lq.setPageSize" @update:sort="lq.setSort">
         <template #cell-name="{ row }"><UiBadge :color="tagColor(row)" :data-test="'tag-chip-' + row.id">{{ row.name }}</UiBadge></template>
         <template #cell-kind="{ row }">{{ row.kind === 'category' ? 'Category' : 'Tag' }}</template>
         <template v-if="canManage" #actions="{ row }">

@@ -51,6 +51,13 @@ function reset(): void {
   draft.name = r?.name ?? ''
   draft.enabled = r?.enabled ?? true
   draft.sort_order = r?.sort_order ?? (store.items.length ? Math.max(...store.items.map((x) => x.sort_order)) + 10 : 10)
+  // The list is paged: a new rule goes after the last rule of the whole list.
+  if (!r && store.total > store.items.length) {
+    const guess = draft.sort_order
+    store.nextSortOrder().then((n) => {
+      if (!props.rule && draft.sort_order === guess) draft.sort_order = n
+    }, () => {})
+  }
   draft.match = r?.match ?? 'all'
   draft.conditions = r ? r.conditions.map((c) => ({ ...c })) : [blankCondition()]
   draft.expression = r?.expression ?? ''
