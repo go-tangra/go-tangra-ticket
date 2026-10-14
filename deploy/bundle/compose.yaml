@@ -1,0 +1,111 @@
+# ticket join bundle, rendered by the gateway's add-module wizard.
+#   docker compose up -d
+# Values come from .env (written by the gateway: core addresses, generated
+# passwords and keys, and the host inputs you gave). private/ holds the
+# single-use enrolment token, the mesh CA and this bundle's own TLS material
+# (a local CA and the certificates of ticket-db and ticket-rustfs).
+name: tangra-ticket
+services:
+  ticket-db:
+    image: timescale/timescaledb:2.17.2-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ticket
+      POSTGRES_PASSWORD: ${GEN_PASSWORD_1}
+      TICKET_APP_PASSWORD: ${GEN_PASSWORD_2}
+    # The server key must belong to the postgres user: copy it before start.
+    entrypoint: ["sh", "-c", "install -d -o postgres -m 0700 /tls-pg && install -o postgres -m 0600 /tls/ticket-db.key /tls-pg/server.key && install -o postgres -m 0644 /tls/ticket-db.crt /tls-pg/server.crt && exec docker-entrypoint.sh \"$$@\"", "--"]
+    command: ["postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/tls-pg/server.crt", "-c", "ssl_key_file=/tls-pg/server.key", "-c", "ssl_min_protocol_version=TLSv1.2"]
+    volumes:
+      - ticket-db:/var/lib/postgresql/data
+      - ./private/tls:/tls:ro
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ticket"]
+      interval: 5s
+      retries: 30
+  # Attachments (S3-compatible, TLS); ticket creates its bucket on start.
+  ticket-rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ticket
+      RUSTFS_SECRET_KEY: ${GEN_PASSWORD_3}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_TLS_PATH: /tls-server
+    volumes:
+      - ticket-rustfs:/data
+      - ticket-rustfs-tls:/tls-server:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--no-check-certificate", "https://127.0.0.1:9000/health"]
+      interval: 5s
+      retries: 40
+    depends_on:
+      ticket-init: { condition: service_completed_successfully }
+  # Host-local secrets, in the ticket-secrets volume: the inbound relay token
+  # (generated once, kept across restarts; your MTA presents it), the SMTP
+  # relay password from .env (rewritten on every start), and RustFS's TLS
+  # material under the names and owner RustFS expects.
+  ticket-init:
+    image: ${MODULE_IMAGE}:${MODULE_VERSION}
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -eu
+        umask 077
+        if [ ! -s /secrets/relay.token ]; then
+          head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > /secrets/relay.token
+          echo "relay token generated"
+        fi
+        printf '%s' "$$TICKET_SMTP_PASSWORD" > /secrets/smtp.password
+        install -o 10001 -g 10001 -m 0644 /tls/ticket-rustfs.crt /rustfs-tls/rustfs_cert.pem
+        install -o 10001 -g 10001 -m 0600 /tls/ticket-rustfs.key /rustfs-tls/rustfs_key.pem
+    environment:
+      TICKET_SMTP_PASSWORD: ${TICKET_SMTP_PASSWORD}
+    volumes:
+      - ticket-secrets:/secrets
+      - ticket-rustfs-tls:/rustfs-tls
+      - ./private/tls:/tls:ro
+    restart: "no"
+  ticket:
+    image: ${MODULE_IMAGE}:${MODULE_VERSION}
+    restart: unless-stopped
+    # Root so it can read the inbound edge key from the host directory and
+    # write its SVID state, as the platform stack runs it.
+    user: "0:0"
+    command: ["-config", "/app/config.yaml"]
+    environment:
+      FREYA_ADVERTISE_HOST: ${MODULE_ADVERTISE_HOST}
+      TICKET_KEK: ${GEN_KEY_1}
+      # OS roots plus the bundle's local CA (the S3 client has no CA option).
+      SSL_CERT_DIR: /etc/ssl/certs:/tls-ca
+    ports:
+      - "${MODULE_BIND_IP}:9955:9955"
+      - "${MODULE_BIND_IP}:9956:9956"
+      - "${TICKET_INBOUND_LISTEN}:9957"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./policy.yaml:/app/policy.yaml:ro
+      - ./private/enrollment.token:/tokens/enrollment.token:ro
+      - ./private/tls/ca.pem:/tls-ca/ca.pem:ro
+      - ${TICKET_INBOUND_TLS_DIR}:/edge:ro
+      - ${VALKEY_CA_FILE}:/tls/valkey-ca.pem:ro
+      - ticket-secrets:/secrets:ro
+      - ticket-state:/state
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9840/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
+    depends_on:
+      ticket-db: { condition: service_healthy }
+      ticket-rustfs: { condition: service_healthy }
+      ticket-init: { condition: service_completed_successfully }
+volumes:
+  ticket-db: {}
+  ticket-rustfs: {}
+  ticket-rustfs-tls: {}
+  ticket-secrets: {}
+  ticket-state: {}
