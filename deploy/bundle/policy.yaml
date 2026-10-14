@@ -1,0 +1,17 @@
+# Freya service-to-service policy for ticket (rendered for this core's trust
+# domain): the gateway forwards browser traffic and probes health; other
+# platform modules may open and read tickets through ticket.v1. The inbound
+# mail edge is off the mesh (relay token) and not governed by this file.
+version: ticket-join-1
+rules:
+  - id: gateway-forwards
+    from: ["spiffe://${TRUST_DOMAIN}/svc/gateway"]
+    to: ["ticket"]
+    operations: ["*"]
+    effect: allow
+  - id: modules-tickets
+    from: ["spiffe://${TRUST_DOMAIN}/svc/*"]
+    to: ["ticket"]
+    operations: ["/ticket.v1.Tickets/Create", "/ticket.v1.Tickets/Get", "/ticket.v1.Tickets/List",
+      "/ticket.v1.Tickets/AddComment", "/grpc.health.v1.Health/Check"]
+    effect: allow
