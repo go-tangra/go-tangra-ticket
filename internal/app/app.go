@@ -26,11 +26,13 @@ import (
 
 	"github.com/go-tangra/go-tangra-lcm/sdk/v4/pkg/lcmidentity"
 	"github.com/go-tangra/go-tangra/v4"
+	"github.com/go-tangra/go-tangra/v4/helpdocs"
 
 	authv1 "github.com/go-tangra/go-tangra-auth/sdk/v4/api/proto/auth/v1"
 	"github.com/go-tangra/go-tangra-auth/sdk/v4/pkg/authclient"
 	"github.com/go-tangra/go-tangra-portal/sdk/v4/pkg/gatewayclient"
 
+	"github.com/go-tangra/go-tangra-ticket/v4/docs"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/agents"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/audit"
 	"github.com/go-tangra/go-tangra-ticket/v4/internal/authz"
@@ -109,6 +111,9 @@ type App struct {
 	Engine   *rules.Engine
 	Triage   inbound.Triage
 	Mail     *inbound.Handler
+	// Docs is the embedded help bundle (docs/help) served to the gateway;
+	// its digest is announced at registration.
+	Docs *helpdocs.Bundle
 
 	inboundLis net.Listener
 	closers    []func()
@@ -118,6 +123,11 @@ type App struct {
 // Build wires the service.
 func Build(ctx context.Context, cfg config.Config, o Options) (a *App, err error) {
 	a = &App{Cfg: cfg}
+	// The help pages ship in the binary; CI lints them, so a bundle that does
+	// not load is a broken build: refuse to start.
+	if a.Docs, err = helpdocs.Load(docs.Help(), ticketmanifest.Module); err != nil {
+		return nil, fmt.Errorf("ticket: help docs: %w", err)
+	}
 	handler := o.Logger
 	if handler == nil {
 		handler = slog.NewJSONHandler(os.Stderr, nil)
@@ -188,6 +198,10 @@ func Build(ctx context.Context, cfg config.Config, o Options) (a *App, err error
 	}
 	a.HTTP.Register(httpapi.Deps{Hub: a.Hub, Health: a.health, Tickets: a.Tickets, Comments: a.Comments, Mailboxes: a.Mailbox,
 		Rules: a.Rules, Tags: a.Tags, Stats: stats.New(a.Repo), Backup: backup.New(a.Repo, a.Blob, a.Audit)})
+	// Help bundle for the gateway only (its verified service identity, behind
+	// the Freya security chain); mounted before the catch-all, which would
+	// otherwise shadow it.
+	a.Freya.HTTP().Handle(helpdocs.BundlePath, helpdocs.NewHandler(a.Docs, helpdocs.AllowServices(cfg.Gateway.Service)))
 	a.Freya.HTTP().HandlePrefix("/", a.HTTP.Handler())
 
 	// Service-to-service gRPC surface (ticket.v1), SPIFFE mTLS, not gateway-proxied.
@@ -473,6 +487,7 @@ func (a *App) register(ctx context.Context) {
 			continue
 		}
 		client, err = gatewayclient.New(conn, gatewayclient.Options{Manifest: man, HTTPURL: "https://" + httpEP.Host, GRPCTarget: grpcEP.Host, Logger: a.Log,
+			DocsDigest: a.Docs.Digest, // the gateway fetches the help bundle when it changes
 			OnState: func(s gatewayclient.State) {
 				a.Log.Info("gateway lease", "registered", s.Registered, "lease", s.LeaseID, "err", s.Err)
 			}})
